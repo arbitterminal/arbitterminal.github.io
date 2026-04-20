@@ -52,6 +52,7 @@
   <a href="https://t.me/arbit_daily">→ Мій Telegram-канал з результатами</a>
 </section>
 
+<img src="arbitterminal.png">
 <!-- ПРО ARBITERMINAL -->
 <section class="about">
   <h2>Що таке ArbitTerminal</h2>
