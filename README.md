@@ -103,9 +103,9 @@
 
     <div class="card">
       <h3>Tiger Trade (Broker)</h3>
-      <p>Брокер для роботи з фіатом і додаткових інструментів.</p>
-      <span class="tag">Реферальний бонус</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <p>Брокер для торгівлі на Binance та ByBit. Кешбек комісій до 35%.</p>
+      <span class="tag">Знижка 35% та 10% на комісіях</span>
+      <a class="btn" href="https://account.tiger.com/signup?referral=alexhizh" target="_blank">Зареєструватись →</a>
     </div>
 
   </div>
