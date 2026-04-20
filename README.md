@@ -49,7 +49,7 @@
   <p>Список бірж, які використовую особисто в системі ArbitTerminal. 
      Реєстрація через мої посилання дає знижку на комісію або бонус — 
      залежно від біржі.</p>
-  <a href="https://t.me/ТВІЙканал">→ Мій Telegram-канал з результатами</a>
+  <a href="https://t.me/arbit_daily">→ Мій Telegram-канал з результатами</a>
 </section>
 
 <!-- ПРО ARBITERMINAL -->
@@ -71,35 +71,35 @@
       <h3>Binance</h3>
       <p>Основна біржа. Найвища ліквідність.</p>
       <span class="tag">Знижка на комісію: 10%</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <a class="btn" href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_2FLH3&utm_source=referral_entrance" target="_blank">Зареєструватись →</a>
     </div>
 
     <div class="card">
       <h3>Bybit</h3>
       <p>Фʼючерси і спот. Використовую для парних позицій.</p>
       <span class="tag">Бонус при реєстрації: до $30</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <a class="btn" href="https://www.bybit.com/invite?ref=DJJAEK4" target="_blank">Зареєструватись →</a>
     </div>
 
     <div class="card">
-      <h3>OKX</h3>
+      <h3>BingX</h3>
       <p>Широкий список активів для арбітражу.</p>
-      <span class="tag">Знижка на комісію: 20%</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <span class="tag">Бонус при реєстрації: до $500</span>
+      <a class="btn" href="https://bingxdao.com/invite/XF535B/" target="_blank">Зареєструватись →</a>
     </div>
 
     <div class="card">
       <h3>Gate.io</h3>
       <p>Підходить для менш популярних пар зі спредом.</p>
-      <span class="tag">Бонус при реєстрації</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <span class="tag">Знижка на комісію: 20%</span>
+      <a class="btn" href="https://www.gate.com/share/ALEXHIZH" target="_blank">Зареєструватись →</a>
     </div>
 
     <div class="card">
       <h3>MEXC</h3>
       <p>Нові лістинги. Використовую для специфічних стратегій.</p>
-      <span class="tag">Знижка на ф'ючерсну комісію</span>
-      <a class="btn" href="ТВОЄафіліатПОСИЛАННЯ" target="_blank">Зареєструватись →</a>
+      <span class="tag">Знижка на комісію: 20%</span>
+      <a class="btn" href="https://promote.mexc.com/a/3dQDTHvI" target="_blank">Зареєструватись →</a>
     </div>
 
     <div class="card">
@@ -120,13 +120,13 @@
     <summary>Навіщо реєструватись через твоє посилання?</summary>
     <p>Ти отримуєш знижку на комісію або реєстраційний бонус від біржі — 
        залежно від акції. Це стандартна реферальна програма бірж, 
-       яка не впливає на умови твого акаунту.</p>
+       яка дозволяє економити на комісіях та заробляти більше.</p>
   </details>
 
   <details>
     <summary>Чи потрібно реєструватись на всіх біржах?</summary>
     <p>Для роботи з ArbitTerminal потрібні мінімум 2–3 біржі одночасно. 
-       Конкретний список залежить від обраних торгових пар.</p>
+       Конкретний список залежить від обраних торгових пар. Рекомендую на старті Binance, MEXC, BingX, Gate</p>
   </details>
 
   <details>
@@ -149,7 +149,7 @@
     Я не є офіційним представником ArbitTerminal. 
     Це особиста сторінка учасника системи.
   </p>
-  <a href="https://t.me/ТВІЙ_НІК">Написати в Telegram: @ТВІЙ_НІК</a>
+  <a href="https://t.me/alexhizh">Написати в Telegram: @AlexHizh</a>
 </section>
 
 </body>
