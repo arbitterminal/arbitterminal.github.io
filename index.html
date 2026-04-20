@@ -3,153 +3,606 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2000$ на арбітражі між біржами в терміналі ArbitTerminal</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- ═══════════════════════════════════════════
+       SEO: PRIMARY META
+  ════════════════════════════════════════════ -->
+  <title>ArbitTerminal — арбітражна торгівля між криптобіржами | AlexHizh</title>
+  <meta name="description" content="Арбітражний термінал між криптобіржами: Binance, MEXC, BingX, Gate.io, Bybit. Реальні результати, реєстрація зі знижкою на комісію. Детально про ArbitTerminal — як це працює і скільки можна заробити.">
+  <meta name="keywords" content="арбітраж криптовалюта, ArbitTerminal, крипто арбітраж між біржами, арбітражний бот, Binance арбітраж, MEXC арбітраж, заробіток на крипті">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="AlexHizh">
+  <link rel="canonical" href="https://arbitterminal.github.io/">
+  <meta name="language" content="uk">
+
+  <!-- ═══════════════════════════════════════════
+       SEO: OPEN GRAPH (Telegram, Facebook, Viber)
+  ════════════════════════════════════════════ -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://arbitterminal.github.io/">
+  <meta property="og:title" content="ArbitTerminal — арбітраж між криптобіржами">
+  <meta property="og:description" content="Напівавтоматичний термінал для арбітражу між Binance, MEXC, BingX, Gate.io. Реєстрація зі знижкою на комісію. Реальні результати в Telegram-каналі.">
+  <meta property="og:locale" content="uk_UA">
+  <meta property="og:site_name" content="ArbitTerminal | AlexHizh">
+
+  <!-- ═══════════════════════════════════════════
+       SEO: TWITTER CARD
+  ════════════════════════════════════════════ -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="ArbitTerminal — арбітраж між криптобіржами">
+  <meta name="twitter:description" content="Напівавтоматичний термінал. Арбітраж на спреді між Tier-1 і Tier-2 біржами. Реальні результати, реєстрація зі знижкою.">
+
+  <!-- ═══════════════════════════════════════════
+       SCHEMA: JSON-LD для Google, Perplexity, ChatGPT Search
+       Три блоки: WebPage + FAQPage + Person
+  ════════════════════════════════════════════ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "ArbitTerminal — арбітражна торгівля між криптобіржами",
+    "description": "Особиста сторінка партнера ArbitTerminal. Арбітражний термінал між криптобіржами: як працює, реальні результати, реєстрація зі знижкою на комісію.",
+    "url": "https://arbitterminal.github.io/",
+    "inLanguage": "uk",
+    "author": {
+      "@type": "Person",
+      "name": "AlexHizh",
+      "url": "https://t.me/alexhizh"
+    },
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "ArbitTerminal",
+      "applicationCategory": "FinanceApplication",
+      "description": "Напівавтоматичний термінал для арбітражної торгівлі між криптобіржами. Система моніторить різницю в ціні між біржами і відкриває парні позиції (лонг/шорт) одночасно.",
+      "operatingSystem": "Web",
+      "url": "https://arbitterminal.github.io/"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Що таке ArbitTerminal?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ArbitTerminal — напівавтоматичний термінал для арбітражної торгівлі між криптобіржами. Система моніторить різницю в ціні одного активу між біржами і відкриває парні позиції: лонг на одній біржі, шорт на іншій. Ринковий ризик нейтралізується, заробіток формується на спреді."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Як працює арбітраж між криптобіржами?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Одна і та сама монета на різних біржах коштує по-різному. Термінал фіксує цю різницю і відкриває одночасно дві позиції: купівлю там, де дешевше, і продаж там, де дорожче. Коли спред закривається — обидві позиції закриваються з прибутком."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Навіщо реєструватись на біржах через партнерське посилання?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Реєстрація через реферальне посилання дає знижку на торгові комісії або реєстраційний бонус від біржі — залежно від акції. Це стандартна афіліатна програма бірж, яка не впливає на умови акаунту."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Чи є гарантія прибутку при арбітражі?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ні. Арбітраж несе ринкові ризики: делістинг монети, різке розширення спреду, технічні збої на біржі. Реальна статистика результатів публікується в Telegram-каналі."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Скільки часу потрібно на роботу з терміналом?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Це не повністю автоматична система. Потрібно 30–60 хвилин на тиждень на балансування депозиту між біржами і моніторинг відкритих позицій."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Які біржі підтримує ArbitTerminal?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Binance, Bybit, MEXC, BingX, Gate.io, Bitget та інші. Для старту рекомендується підключити мінімум 2–3 біржі одночасно."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "AlexHizh",
+    "description": "Партнер ArbitTerminal. Арбітражна торгівля між криптобіржами.",
+    "url": "https://arbitterminal.github.io/",
+    "sameAs": [
+      "https://t.me/alexhizh",
+      "https://t.me/arbit_daily"
+    ]
+  }
+  </script>
+
+  <!-- ═══════════════════════════════════════════
+       STYLES
+  ════════════════════════════════════════════ -->
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; }
-    
-    .hero { padding: 60px 20px; text-align: center; border-bottom: 1px solid #222; }
-    .hero h1 { font-size: 2rem; color: #fff; margin-bottom: 12px; }
-    .hero p { font-size: 1rem; color: #888; max-width: 540px; margin: 0 auto 20px; }
-    .hero a { color: #f0b90b; text-decoration: none; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    .about { padding: 40px 20px; max-width: 700px; margin: 0 auto; }
-    .about h2 { font-size: 1.2rem; color: #fff; margin-bottom: 12px; }
-    .about p { color: #aaa; line-height: 1.7; }
-    .about a { color: #f0b90b; text-decoration: none; }
+    :root {
+      --gold: #f0b90b;
+      --gold-dark: #d4a00a;
+      --bg: #0f0f0f;
+      --bg-card: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #e0e0e0;
+      --muted: #888;
+      --dim: #555;
+    }
 
-    .exchanges { padding: 40px 20px; max-width: 900px; margin: 0 auto; }
-    .exchanges h2 { font-size: 1.2rem; color: #fff; margin-bottom: 24px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    
-    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 24px; }
-    .card h3 { font-size: 1.1rem; color: #fff; margin-bottom: 8px; }
-    .card p { font-size: 0.85rem; color: #888; margin-bottom: 6px; }
-    .card .tag { font-size: 0.75rem; color: #f0b90b; margin-bottom: 16px; display: block; }
-    
-    .btn { display: inline-block; background: #f0b90b; color: #000; 
-           font-weight: 600; padding: 10px 20px; border-radius: 6px; 
-           text-decoration: none; font-size: 0.9rem; }
-    .btn:hover { background: #d4a00a; }
+    html { scroll-behavior: smooth; }
 
-    .faq { padding: 40px 20px; max-width: 700px; margin: 0 auto; border-top: 1px solid #222; }
-    .faq h2 { font-size: 1.2rem; color: #fff; margin-bottom: 20px; }
-    .faq details { margin-bottom: 12px; border: 1px solid #222; border-radius: 8px; padding: 14px 16px; }
-    .faq summary { color: #ccc; cursor: pointer; font-size: 0.95rem; }
-    .faq p { color: #888; margin-top: 10px; font-size: 0.9rem; line-height: 1.6; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
 
-    .contact { text-align: center; padding: 40px 20px; border-top: 1px solid #222; }
-    .contact a { color: #f0b90b; text-decoration: none; font-size: 1rem; }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-dark); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 72px 20px 56px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Це важливо для SEO: єдиний H1 на сторінці */
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      color: #fff;
+      margin-bottom: 16px;
+      line-height: 1.25;
+    }
+
+    .hero h1 span { color: var(--gold); }
+
+    .hero p {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 28px;
+    }
+
+    .hero-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .hero-links a {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .hero-links .primary { background: var(--gold); color: #000; }
+    .hero-links .primary:hover { background: var(--gold-dark); }
+    .hero-links .secondary { border: 1px solid var(--border); color: var(--muted); }
+    .hero-links .secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── SECTION WRAPPER ── */
+    section { padding: 48px 20px; }
+
+    .section-inner { max-width: 800px; margin: 0 auto; }
+
+    /* H2 — секції */
+    h2 {
+      font-size: 1.15rem;
+      color: #fff;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* H3 — підзаголовки всередині секцій */
+    h3 { font-size: 1rem; color: #fff; }
+
+    p { color: #aaa; line-height: 1.75; margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── HOW IT WORKS ── */
+    .steps { display: grid; gap: 16px; margin-top: 20px; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      background: var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .step-text h3 { margin-bottom: 4px; }
+    .step-text p { font-size: 0.9rem; }
+
+    /* ── EXCHANGES GRID ── */
+    .exchanges { background: #0a0a0a; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h3 { font-size: 1rem; margin-bottom: 6px; }
+    .card p { font-size: 0.82rem; color: var(--muted); flex-grow: 1; margin-bottom: 10px; }
+    .card .tag { font-size: 0.72rem; color: var(--gold); margin-bottom: 14px; display: block; font-weight: 600; }
+
+    .btn {
+      display: inline-block;
+      background: var(--gold);
+      color: #000;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      text-align: center;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--gold-dark); color: #000; }
+
+    /* ── RESULTS ── */
+    .result-note {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ── FAQ ── */
+    .faq-list { margin-top: 16px; display: grid; gap: 10px; }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      transition: border-color 0.15s;
+    }
+    details[open] { border-color: var(--dim); }
+
+    summary {
+      color: #ccc;
+      cursor: pointer;
+      font-size: 0.95rem;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    summary::after { content: "+"; color: var(--gold); font-size: 1.1rem; flex-shrink: 0; }
+    details[open] summary::after { content: "−"; }
+    summary::-webkit-details-marker { display: none; }
+
+    details p { color: var(--muted); margin-top: 12px; font-size: 0.88rem; }
+
+    /* ── CONTACT ── */
+    .contact { text-align: center; border-top: 1px solid var(--border); }
+    .contact-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+    .contact-links a { font-size: 0.95rem; }
+
+    .disclaimer {
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: var(--dim);
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.5rem; }
+    }
   </style>
 </head>
 <body>
-<center><img src="arbitterminal.png" width="630"></center>
-<!-- HERO -->
-<section class="about">
-<h2>Де тут гроші і як можна заробити?</h2>
-<p>Одна і там сама монета на різних біржах коштує по-різному. Купуєш де дешевше, продаєш де дорожче. Лонг на одній біржі, шорт на іншій — ринковий ризик нейтральний, заробіток на спреді.
-Але є специфіка, яка відрізняє цей підхід від "класичного" арбітражу на топових тікерах (монетах).</p><br><br>
-<h2>Де шукати спреди</h2>
-<p>На BTC чи ETH спред між біржами — мізерний. Там сидять сотні ботів і різниця вирівнюється за мілісекунди. Цікавіше виглядають волатильні монети з меншою ліквідністю — умовні SIREN, RIVER, RAVE etc. Там спред може відкриватись на 1-2%, а в моменти різких рухів — і до десятків відсотків. Термінал якраз моніторить такі зв'язки, переважно між Tier-1 і Tier-2 біржами: Binance, MEXC, BingX, BitGet, Gate і т.д</p><br><br>
-<!-- ПРО ARBITERMINAL -->
-<h2>Що таке ArbitTerminal</h2>
-  <p>Напівавтоматичний термінал для арбітражної торгівлі між криптобіржами. 
-     Система шукає різницю в ціні активу між біржами і відкриває позиції 
-     одночасно на обох сторонах. Ручний трейдинг і прогнози — не потрібні. 
-     Потрібен депозит, підключені біржові акаунти і щотижневий моніторинг.<br><br>
-     Детальніше про умови та мої результати — в каналі.</p>
-  <br><br><a href="https://t.me/arbit_daily">→ Мій Telegram-канал з результатами</a>
-</section>
 
-<!-- БІРЖІ -->
-<section class="exchanges">
-  <h2>Біржі для реєстрації</h2>
-  <div class="grid">
-
-    <div class="card">
-      <h3>Binance</h3>
-      <p>Основна біржа. Найвища ліквідність.</p>
-      <span class="tag">Знижка на комісію: 10%</span>
-      <a class="btn" href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_2FLH3&utm_source=referral_entrance" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       HERO — єдиний H1, головний SEO-сигнал
+  ════════════════════════════════════════════ -->
+  <header>
+    <div class="hero">
+      <h1>Арбітраж між криптобіржами<br>з <span>ArbitTerminal</span></h1>
+      <p>Напівавтоматичний термінал. Парні позиції на спреді між Binance, MEXC, BingX, Gate.io і Bybit. Реальні результати — без прогнозів.</p>
+      <div class="hero-links">
+        <a class="primary" href="#exchanges">Зареєструватись на біржах →</a>
+        <a class="secondary" href="https://t.me/arbit_daily" target="_blank" rel="noopener">Telegram-канал з результатами</a>
+      </div>
     </div>
+  </header>
 
-    <div class="card">
-      <h3>Bybit</h3>
-      <p>Фʼючерси і спот. Використовую для парних позицій.</p>
-      <span class="tag">Бонус при реєстрації: до $30</span>
-      <a class="btn" href="https://www.bybit.com/invite?ref=DJJAEK4" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       ЯК ЦЕ ПРАЦЮЄ — семантичний блок для AI
+  ════════════════════════════════════════════ -->
+  <section id="how-it-works" aria-label="Як працює арбітраж між біржами">
+    <div class="section-inner">
+      <h2>Як це працює</h2>
+      <p>
+        Одна і та сама монета на різних біржах коштує по-різному. Купуєш де дешевше, продаєш де дорожче.
+        Лонг на одній біржі, шорт на іншій — ринковий ризик нейтральний, заробіток на спреді.
+      </p>
+      <p>
+        На BTC або ETH спред між біржами мізерний: там сотні ботів вирівнюють різницю за мілісекунди.
+        Цікавіші — волатильні монети з меншою ліквідністю: умовні SIREN, RIVER, RAVE тощо.
+        Там спред може відкриватись на 1–2%, а в моменти різких рухів — значно більше.
+        Термінал моніторить такі зв'язки переважно між Tier-1 і Tier-2 біржами.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <h3>Термінал сканує спреди</h3>
+            <p>Автоматично відстежує різницю в ціні одного активу між підключеними біржами в реальному часі.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <h3>Відкриває парні позиції</h3>
+            <p>Лонг на біржі де дешевше, шорт — де дорожче. Одночасно. Ринковий напрямок не має значення.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <h3>Закриває коли спред стискається</h3>
+            <p>Прибуток фіксується на різниці. Потрібен щотижневий моніторинг і балансування депозиту між біржами.</p>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>BingX</h3>
-      <p>Широкий список активів для арбітражу.</p>
-      <span class="tag">Бонус при реєстрації: до $500</span>
-      <a class="btn" href="https://bingxdao.com/invite/XF535B/" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       ПРО ArbitTerminal
+  ════════════════════════════════════════════ -->
+  <section id="about" aria-label="Що таке ArbitTerminal">
+    <div class="section-inner">
+      <h2>Що таке ArbitTerminal</h2>
+      <p>
+        <strong style="color:#fff">ArbitTerminal</strong> — напівавтоматичний термінал для арбітражної торгівлі між криптобіржами.
+        Система шукає різницю в ціні активу між біржами і відкриває позиції одночасно на обох сторонах.
+        Ручний трейдинг і прогнози не потрібні.
+      </p>
+      <p>
+        Потрібно: депозит, підключені біржові акаунти, 30–60 хвилин на тиждень на моніторинг.
+        Це не пасивний дохід і не торговий бот — це інструмент з конкретною механікою і ризиками.
+      </p>
+      <div class="result-note">
+        Детальніше про умови підключення, результати та реальну статистику —
+        в <a href="https://t.me/arbit_daily" target="_blank" rel="noopener">Telegram-каналі @arbit_daily</a>.
+        Публікую результати щотижня без прикрас.
+      </div>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>Gate.io</h3>
-      <p>Підходить для менш популярних пар зі спредом.</p>
-      <span class="tag">Знижка на комісію: 20%</span>
-      <a class="btn" href="https://www.gate.com/share/ALEXHIZH" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       БІРЖІ — основний конверсійний блок
+  ════════════════════════════════════════════ -->
+  <section id="exchanges" class="exchanges" aria-label="Реєстрація на біржах зі знижкою">
+    <div class="section-inner">
+      <h2>Реєстрація на біржах зі знижкою</h2>
+      <p style="font-size:0.88rem;">
+        Реєстрація через партнерське посилання дає знижку на комісію або бонус від біржі.
+        Це не впливає на умови твого акаунту — це стандартна реферальна програма.
+      </p>
+
+      <div class="grid">
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">Binance</h3>
+          <p itemprop="description">Найбільша біржа за обсягом. Основна для арбітражних пар з максимальною ліквідністю.</p>
+          <span class="tag">↓ Знижка на комісію 10%</span>
+          <a class="btn"
+             href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_2FLH3&utm_source=referral_entrance"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись на Binance зі знижкою">
+            Зареєструватись →
+          </a>
+        </article>
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">Bybit</h3>
+          <p itemprop="description">Фʼючерси і спот. Використовую для парних позицій на великих тікерах.</p>
+          <span class="tag">🎁 Бонус при реєстрації до $30</span>
+          <a class="btn"
+             href="https://www.bybit.com/invite?ref=DJJAEK4"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись на Bybit з бонусом">
+            Зареєструватись →
+          </a>
+        </article>
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">BingX</h3>
+          <p itemprop="description">Широкий список активів. Часто дає кращий спред на менш популярних монетах.</p>
+          <span class="tag">🎁 Бонус при реєстрації до $500</span>
+          <a class="btn"
+             href="https://bingxdao.com/invite/XF535B/"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись на BingX з бонусом">
+            Зареєструватись →
+          </a>
+        </article>
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">Gate.io</h3>
+          <p itemprop="description">Підходить для менш ліквідних пар зі значним спредом між біржами.</p>
+          <span class="tag">↓ Знижка на комісію 20%</span>
+          <a class="btn"
+             href="https://www.gate.com/share/ALEXHIZH"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись на Gate.io зі знижкою">
+            Зареєструватись →
+          </a>
+        </article>
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">MEXC</h3>
+          <p itemprop="description">Великий список нових лістингів. Часто перший реагує на волатильні монети.</p>
+          <span class="tag">↓ Знижка на комісію 20%</span>
+          <a class="btn"
+             href="https://promote.mexc.com/a/3dQDTHvI"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись на MEXC зі знижкою">
+            Зареєструватись →
+          </a>
+        </article>
+
+        <article class="card" itemscope itemtype="https://schema.org/Product">
+          <h3 itemprop="name">Tiger Trade (Broker)</h3>
+          <p itemprop="description">Брокер для торгівлі на Binance та Bybit. Знижує торгову комісію через власний роутинг.</p>
+          <span class="tag">↓ Кешбек комісій до 35% + знижка 10%</span>
+          <a class="btn"
+             href="https://account.tiger.com/signup?referral=alexhizh"
+             target="_blank"
+             rel="noopener sponsored"
+             aria-label="Зареєструватись у Tiger Trade з кешбеком">
+            Зареєструватись →
+          </a>
+        </article>
+
+      </div>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>MEXC</h3>
-      <p>Нові лістинги. Використовую для специфічних стратегій.</p>
-      <span class="tag">Знижка на комісію: 20%</span>
-      <a class="btn" href="https://promote.mexc.com/a/3dQDTHvI" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       FAQ — індексується як FAQPage schema
+  ════════════════════════════════════════════ -->
+  <section id="faq" aria-label="Часті питання про ArbitTerminal">
+    <div class="section-inner">
+      <h2>Часті питання</h2>
+
+      <div class="faq-list">
+
+        <details>
+          <summary>Що таке ArbitTerminal і чим він відрізняється від трейдингового бота?</summary>
+          <p>
+            ArbitTerminal — не торговий бот і не сигнальний сервіс. Це напівавтоматичний термінал
+            для арбітражу: він відкриває парні позиції на спреді між біржами, а не прогнозує напрямок ринку.
+            Потрібна участь користувача: моніторинг і балансування депозиту раз на тиждень.
+          </p>
+        </details>
+
+        <details>
+          <summary>Навіщо реєструватись через партнерське посилання?</summary>
+          <p>
+            Отримуєш знижку на комісію або бонус від біржі — залежно від умов кожної платформи.
+            Це стандартна реферальна програма. Умови акаунту залишаються незмінними.
+          </p>
+        </details>
+
+        <details>
+          <summary>Скільки часу займає робота з терміналом?</summary>
+          <p>
+            30–60 хвилин на тиждень на балансування депозиту між біржами і моніторинг відкритих позицій.
+            Не підходить тим, хто шукає повністю пасивний інструмент без участі.
+          </p>
+        </details>
+
+        <details>
+          <summary>На яких біржах потрібно зареєструватись?</summary>
+          <p>
+            Мінімум 2–3 біржі одночасно. Для старту рекомендую: Binance, MEXC, BingX і Gate.io.
+            Конкретний набір залежить від обраних торгових пар і доступного депозиту.
+          </p>
+        </details>
+
+        <details>
+          <summary>Чи є гарантія прибутку?</summary>
+          <p>
+            Ні. Арбітраж несе ринкові ризики: делістинг монети, різке розширення спреду,
+            технічні збої на біржі, проблеми з ліквідністю. Реальна статистика —
+            в <a href="https://t.me/arbit_daily" target="_blank" rel="noopener">Telegram-каналі</a>.
+          </p>
+        </details>
+
+        <details>
+          <summary>Як підключитись до ArbitTerminal?</summary>
+          <p>
+            Детальні умови підключення, вартість і технічні вимоги —
+            в Telegram: <a href="https://t.me/alexhizh" target="_blank" rel="noopener">@AlexHizh</a> або в каналі
+            <a href="https://t.me/arbit_daily" target="_blank" rel="noopener">@arbit_daily</a>.
+          </p>
+        </details>
+
+      </div>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>Tiger Trade (Broker)</h3>
-      <p>Брокер для торгівлі на Binance та ByBit. Кешбек комісій до 35%.</p>
-      <span class="tag">Знижка 35% та 10% на комісіях</span>
-      <a class="btn" href="https://account.tiger.com/signup?referral=alexhizh" target="_blank">Зареєструватись →</a>
+  <!-- ═══════════════════════════════════════════
+       CONTACT
+  ════════════════════════════════════════════ -->
+  <section class="contact" aria-label="Контакти">
+    <div class="section-inner">
+      <h2>Контакт</h2>
+      <div class="contact-links">
+        <a href="https://t.me/alexhizh" target="_blank" rel="noopener">Telegram: @AlexHizh</a>
+        <a href="https://t.me/arbit_daily" target="_blank" rel="noopener">Канал: @arbit_daily</a>
+      </div>
+      <p class="disclaimer">
+        Це особиста сторінка партнера-учасника системи ArbitTerminal.
+        Посилання на біржі є партнерськими (афіліатними).
+        Інформація не є фінансовою порадою.
+      </p>
     </div>
-
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="faq">
-  <h2>Часті питання</h2>
-
-  <details>
-    <summary>Навіщо реєструватись через твоє посилання?</summary>
-    <p>Ти отримуєш знижку на комісію або реєстраційний бонус від біржі — 
-       залежно від акції. Це стандартна реферальна програма бірж, 
-       яка дозволяє економити на комісіях та заробляти більше.</p>
-  </details>
-
-  <details>
-    <summary>Чи потрібно реєструватись на всіх біржах?</summary>
-    <p>Для роботи з ArbitTerminal потрібні мінімум 2–3 біржі одночасно. 
-       Конкретний список залежить від обраних торгових пар. Рекомендую на старті Binance, MEXC, BingX, Gate</p>
-  </details>
-
-  <details>
-    <summary>Що таке ArbitTerminal і як до нього підключитись?</summary>
-    <p>Напівавтоматичний арбітражний термінал. Умови і деталі — 
-       в моєму Telegram-каналі або напряму в особисті повідомлення.</p>
-  </details>
-
-  <details>
-    <summary>Чи є гарантія прибутку?</summary>
-    <p>Ні. Арбітраж несе ринкові ризики: делістинг, розширення спреду, 
-       технічні збої. Реальна статистика — в моєму каналі.</p>
-  </details>
-
-</section>
-
-<!-- КОНТАКТ -->
-<section class="contact">
-  <p style="color:#666; margin-bottom:12px; font-size:0.85rem;">
-    Я не є офіційним представником ArbitTerminal. 
-    Це особиста сторінка учасника системи.
-  </p>
-  <a href="https://t.me/alexhizh">Написати в Telegram: @AlexHizh</a>
-</section>
+  </section>
 
 </body>
 </html>
