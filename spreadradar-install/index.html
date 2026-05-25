@@ -1,1 +1,532 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Інструкція: реєстрація в SpreadRadar та встановлення скрипта</title>
+  <meta name="description" content="Покрокова інструкція з реєстрації в SpreadRadar та встановлення OrangeMonkey і SpreadRadar Links v1.38 для ArbitTerminal." />
+  <style>
+    :root {
+      --bg: #0b1017;
+      --panel: #111923;
+      --panel-2: #151f2b;
+      --text: #e9f1fb;
+      --muted: #9fb0c3;
+      --line: rgba(255,255,255,.10);
+      --green: #45e06f;
+      --cyan: #48d8ff;
+      --blue: #6aa7ff;
+      --red: #ff4d5f;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
 
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(72,216,255,.16), transparent 34rem),
+        radial-gradient(circle at top right, rgba(69,224,111,.12), transparent 30rem),
+        linear-gradient(180deg, #0b1017 0%, #080c12 100%);
+      line-height: 1.6;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 44px 0 28px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: clamp(26px, 5vw, 54px);
+      background:
+        linear-gradient(135deg, rgba(21,31,43,.92), rgba(10,16,24,.92)),
+        linear-gradient(90deg, rgba(72,216,255,.13), rgba(69,224,111,.09));
+      box-shadow: var(--shadow);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      background-image:
+        linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: radial-gradient(circle at 72% 20%, black, transparent 62%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border: 1px solid rgba(72,216,255,.28);
+      border-radius: 999px;
+      color: #c8f5ff;
+      background: rgba(72,216,255,.08);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    h1 {
+      position: relative;
+      margin: 18px 0 14px;
+      font-size: clamp(30px, 5vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -.04em;
+    }
+
+    .lead {
+      position: relative;
+      max-width: 780px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2.2vw, 20px);
+    }
+
+    .quick {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 18px 0 0;
+    }
+
+    .quick a {
+      display: block;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .quick a:hover {
+      border-color: rgba(72,216,255,.42);
+      background: rgba(72,216,255,.07);
+    }
+
+    main { padding: 20px 0 60px; }
+
+    .notice {
+      margin: 18px 0 28px;
+      border: 1px solid rgba(69,224,111,.25);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      background: rgba(69,224,111,.07);
+      color: #dfffe7;
+    }
+
+    .section-title {
+      margin: 36px 0 16px;
+      font-size: 26px;
+      letter-spacing: -.02em;
+    }
+
+    .steps {
+      display: grid;
+      gap: 20px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(17,25,35,.88);
+      box-shadow: 0 12px 34px rgba(0,0,0,.20);
+      overflow: hidden;
+    }
+
+    .step-body {
+      padding: clamp(18px, 3vw, 26px);
+    }
+
+    .step h2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 12px;
+      font-size: clamp(20px, 2.5vw, 28px);
+      line-height: 1.2;
+      letter-spacing: -.02em;
+    }
+
+    .num {
+      flex: 0 0 auto;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      color: #06210f;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .step p { margin: 8px 0; color: var(--muted); }
+    .step strong { color: var(--text); }
+
+    code, .code {
+      display: inline-block;
+      padding: 2px 7px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.25);
+      color: #d8f6ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: .95em;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin: 12px 0 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      background: rgba(0,0,0,.28);
+      color: #d8f6ff;
+    }
+
+    .shot {
+      margin: 0;
+      border-top: 1px solid var(--line);
+      background: #080c12;
+    }
+
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .caption {
+      padding: 10px 14px 12px;
+      color: var(--muted);
+      font-size: 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,.025);
+    }
+
+    .checklist {
+      display: grid;
+      gap: 12px;
+      padding-left: 0;
+      list-style: none;
+      margin: 12px 0 0;
+    }
+
+    .checklist li {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+      color: var(--muted);
+    }
+
+    .checklist li::before {
+      content: "✓";
+      color: var(--green);
+      font-weight: 900;
+      margin-right: 8px;
+    }
+
+    .warning {
+      border-color: rgba(255,77,95,.25);
+      background: rgba(255,77,95,.08);
+    }
+
+    .footer {
+      margin-top: 36px;
+      padding: 20px 0 42px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 820px) {
+      .quick { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .wrap { width: min(100% - 22px, 1120px); }
+      header { padding-top: 22px; }
+      .hero { border-radius: 22px; }
+      .quick { grid-template-columns: 1fr; }
+      .step h2 { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <section class="hero">
+      <span class="badge">SpreadRadar × ArbitTerminal</span>
+      <h1>Інструкція: реєстрація та встановлення скрипта</h1>
+      <p class="lead">Покроково: як увійти в SpreadRadar через Telegram, встановити OrangeMonkey у Chrome, додати скрипт <strong>SpreadRadar Links v1.38</strong> і перевірити його роботу в ArbitTerminal.</p>
+      <nav class="quick" aria-label="Швидка навігація">
+        <a href="#login">1. Вхід</a>
+        <a href="#orangemonkey">2. OrangeMonkey</a>
+        <a href="#script">3. Скрипт</a>
+        <a href="#check">4. Перевірка</a>
+      </nav>
+    </section>
+  </header>
+
+  <main class="wrap">
+    <div class="notice">
+      <strong>Що потрібно:</strong> Google Chrome, Telegram-акаунт, доступ до SpreadRadar, доступ до ArbitTerminal та встановлений скрипт <strong>ArbitTerminal: SpreadRadar Links v1.38</strong>.
+    </div>
+
+    <h2 id="login" class="section-title">Частина 1. Реєстрація / вхід у SpreadRadar</h2>
+    <section class="steps">
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">1</span>Відкрийте SpreadRadar</h2>
+          <p>Перейдіть на сайт:</p>
+          <pre>https://spreadradar.net</pre>
+          <p>Натисніть кнопку <strong>«Увійти через Telegram»</strong>.</p>
+          <p>У вікні Telegram введіть номер телефону, на який зареєстрований ваш Telegram-акаунт, і натисніть <strong>«Далі»</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/1_Register.png" alt="Вхід у SpreadRadar через Telegram" loading="lazy" />
+          <figcaption class="caption">Скрін 1. Сторінка входу SpreadRadar та вікно авторизації Telegram.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">2</span>Підтвердіть вхід у Telegram</h2>
+          <p>У Telegram прийде службове повідомлення з підтвердженням входу на <strong>spreadradar.net</strong>.</p>
+          <p>Натисніть <strong>«Підтвердити»</strong>.</p>
+          <p>Якщо ви не робили цей запит — натисніть <strong>«Відхилити»</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/2_Telegram_confirmation.jpg" alt="Підтвердження входу в Telegram" loading="lazy" />
+          <figcaption class="caption">Скрін 2. Підтвердження авторизації в Telegram.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">3</span>Скопіюйте посилання на скрипт</h2>
+          <p>Після входу в SpreadRadar у верхній частині сторінки знайдіть кнопку завантаження скрипта:</p>
+          <p><span class="code">SpreadRadar-Links-v1.38.txt</span></p>
+          <p>Натисніть по ній правою кнопкою мишки та виберіть <strong>Copy link address</strong> або <strong>Копіювати посилання</strong>.</p>
+          <p>Посилання має вигляд:</p>
+          <pre>https://spreadradar.net/assets/SpreadRadar-Links-v1.38.txt</pre>
+        </div>
+        <figure class="shot">
+          <img src="img/3_Copy_scripts_link.png" alt="Копіювання посилання на скрипт SpreadRadar Links v1.38" loading="lazy" />
+          <figcaption class="caption">Скрін 3. Копіювання посилання на файл скрипта.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <h2 id="orangemonkey" class="section-title">Частина 2. Встановлення OrangeMonkey у Chrome</h2>
+    <section class="steps">
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">4</span>Перейдіть у Chrome Web Store</h2>
+          <p>У Chrome відкрийте меню у правому верхньому куті <strong>⋮</strong>.</p>
+          <p>Далі перейдіть:</p>
+          <pre>Extensions → Visit Chrome Web Store</pre>
+        </div>
+        <figure class="shot">
+          <img src="img/4_Install_Orange_monkey.png" alt="Перехід у Chrome Web Store через меню Chrome" loading="lazy" />
+          <figcaption class="caption">Скрін 4. Перехід у Chrome Web Store.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">5</span>Знайдіть OrangeMonkey</h2>
+          <p>У пошуку Chrome Web Store введіть:</p>
+          <pre>OrangeMonkey</pre>
+          <p>У результатах виберіть розширення <strong>OrangeMonkey</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/5_Install_Orange_monkey2.png" alt="Пошук OrangeMonkey у Chrome Web Store" loading="lazy" />
+          <figcaption class="caption">Скрін 5. Пошук OrangeMonkey.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">6</span>Встановіть OrangeMonkey</h2>
+          <p>На сторінці OrangeMonkey натисніть <strong>Add to Chrome</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/6_Install_Orange_monkey3.png" alt="Кнопка Add to Chrome для OrangeMonkey" loading="lazy" />
+          <figcaption class="caption">Скрін 6. Кнопка Add to Chrome.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">7</span>Підтвердіть встановлення</h2>
+          <p>У вікні підтвердження натисніть <strong>Add extension</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/7_Install_Orange_monkey4.png" alt="Підтвердження встановлення OrangeMonkey" loading="lazy" />
+          <figcaption class="caption">Скрін 7. Підтвердження встановлення розширення.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">8</span>Увімкніть User Scripts</h2>
+          <p>Після встановлення OrangeMonkey відкрийте сторінку налаштувань розширення.</p>
+          <p>Увімкніть <strong>Developer mode</strong>, потім увімкніть <strong>Allow User Scripts</strong>.</p>
+          <p>Це потрібно, щоб Chrome дозволив OrangeMonkey запускати користувацькі скрипти.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/8_Dev_mode_user_scripts.png" alt="Developer mode та Allow User Scripts для OrangeMonkey" loading="lazy" />
+          <figcaption class="caption">Скрін 8. Developer mode та Allow User Scripts.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <h2 id="script" class="section-title">Частина 3. Встановлення SpreadRadar Links v1.38</h2>
+    <section class="steps">
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">9</span>Відкрийте OrangeMonkey</h2>
+          <p>Натисніть іконку OrangeMonkey у верхній панелі браузера.</p>
+          <p>Потім натисніть іконку налаштувань <strong>⚙</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/9_Install_user_scripts.png" alt="Відкриття OrangeMonkey і перехід у налаштування" loading="lazy" />
+          <figcaption class="caption">Скрін 9. Відкриття OrangeMonkey.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">10</span>Перейдіть у My scripts</h2>
+          <p>У меню OrangeMonkey відкрийте розділ <strong>My scripts</strong>.</p>
+          <p>Потім натисніть кнопку <strong>Install from URL</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/10_Install_user_scripts2.png" alt="My scripts та Install from URL в OrangeMonkey" loading="lazy" />
+          <figcaption class="caption">Скрін 10. My scripts та Install from URL.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">11</span>Вставте посилання на скрипт</h2>
+          <p>У поле <strong>Input URL</strong> вставте посилання:</p>
+          <pre>https://spreadradar.net/assets/SpreadRadar-Links-v1.38.txt</pre>
+          <p>Після цього натисніть <strong>OK</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/11_Install_user_scripts3.png" alt="Вставка URL скрипта SpreadRadar Links v1.38" loading="lazy" />
+          <figcaption class="caption">Скрін 11. Вставка посилання на скрипт.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">12</span>Підтвердіть встановлення скрипта</h2>
+          <p>Відкриється сторінка встановлення скрипта.</p>
+          <p>Натисніть <strong>Confirm installation</strong>.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/12_Install_user_scripts4.png" alt="Підтвердження встановлення скрипта в OrangeMonkey" loading="lazy" />
+          <figcaption class="caption">Скрін 12. Confirm installation.</figcaption>
+        </figure>
+      </article>
+
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">13</span>Перевірте, що скрипт встановлений</h2>
+          <p>У списку <strong>My scripts</strong> має з’явитися скрипт:</p>
+          <pre>ArbitTerminal: SpreadRadar Links</pre>
+          <p>Версія:</p>
+          <pre>v1.38-clean-fasttrade-reload</pre>
+        </div>
+        <figure class="shot">
+          <img src="img/13_Installed_user_script.png" alt="Встановлений ArbitTerminal SpreadRadar Links v1.38" loading="lazy" />
+          <figcaption class="caption">Скрін 13. Скрипт встановлений.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <h2 id="check" class="section-title">Частина 4. Перевірка роботи в ArbitTerminal</h2>
+    <section class="steps">
+      <article class="step">
+        <div class="step-body">
+          <h2><span class="num">14</span>Відкрийте ArbitTerminal</h2>
+          <p>Перейдіть на сайт:</p>
+          <pre>https://arbitterminal.online</pre>
+          <p>або:</p>
+          <pre>https://www.arbitterminal.online</pre>
+          <p>Натисніть іконку OrangeMonkey.</p>
+          <p>Має бути увімкнено <strong>All scripts enabled</strong> і активний скрипт <strong>ArbitTerminal: SpreadRadar Links</strong>.</p>
+          <p>Після цього в ArbitTerminal має з’явитися зелена кнопка вибору order size, наприклад <strong>300$</strong>.</p>
+          <p>Доступні варіанти:</p>
+          <pre>100$ / 200$ / 300$ / 400$ / 500$</pre>
+        </div>
+        <figure class="shot">
+          <img src="img/14_Finish.png" alt="Перевірка роботи SpreadRadar Links в ArbitTerminal" loading="lazy" />
+          <figcaption class="caption">Скрін 14. Перевірка роботи скрипта в ArbitTerminal.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <h2 class="section-title">Як перевірити, що все працює</h2>
+    <section class="step">
+      <div class="step-body">
+        <p>Наведіть курсор мишки на тікер у картці сигналу ArbitTerminal.</p>
+        <p>Має з’явитися підказка SpreadRadar з live-даними:</p>
+        <pre>OPEN
+DEPTH: OK / NO
+міні-графік спреду</pre>
+        <p>Якщо підказка з’явилась — скрипт встановлено правильно.</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">Якщо щось не працює</h2>
+    <section class="step warning">
+      <div class="step-body">
+        <p>Перевірте:</p>
+        <ul class="checklist">
+          <li>Чи ви увійшли в SpreadRadar через Telegram.</li>
+          <li>Чи встановлений OrangeMonkey.</li>
+          <li>Чи увімкнено Developer mode.</li>
+          <li>Чи увімкнено Allow User Scripts.</li>
+          <li>Чи встановлений скрипт ArbitTerminal: SpreadRadar Links.</li>
+          <li>Чи відкритий саме сайт arbitterminal.online.</li>
+          <li>Оновіть сторінку ArbitTerminal через F5.</li>
+        </ul>
+        <p>Якщо tooltip показує, що потрібен логін або доступ — відкрийте <span class="code">https://spreadradar.net</span>, увійдіть через Telegram і перевірте, що доступ активний.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    SpreadRadar для ArbitTerminal • Інструкція з встановлення SpreadRadar Links v1.38
+  </footer>
+</body>
+</html>
