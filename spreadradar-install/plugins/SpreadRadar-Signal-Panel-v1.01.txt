@@ -6,9 +6,9 @@
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
 // @grant        none
-// @connect      spreadradar.net
-// @updateURL    https://spreadradar.net/assets/SpreadRadar-Links.txt
-// @downloadURL  https://spreadradar.net/assets/SpreadRadar-Links.txt
+// @connect      arbitterminal.github.io
+// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel-v1.01.txt
+// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel-v1.01.txt
 // @run-at       document-idle
 // ==/UserScript==
 
