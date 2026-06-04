@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         ArbitTerminal: SpreadRadar Signal Panel Layout
+// @name         AT: SpreadRadar Signal Panel Layout
 // @namespace    https://www.arbitterminal.online/
 // @version      1.06-wallet-over-signals
 // @description  Окремий модуль стилізації signal panel, utility-page логіки і хрестика закриття signal-card, сумісний зі SpreadRadar Links
