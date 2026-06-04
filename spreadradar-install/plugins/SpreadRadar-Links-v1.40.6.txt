@@ -1,0 +1,1182 @@
+// ==UserScript==
+// @name         ArbitTerminal: SpreadRadar Links
+// @namespace    https://www.arbitterminal.online/
+// @version      1.40.6-inline-live-normal-position
+// @description  Тікери з посиланнями на SpreadRadar, live spread tooltip, inline live spread, FastTrade auto URL і кнопка OrderSize
+// @match        https://www.arbitterminal.online/*
+// @match        https://arbitterminal.online/*
+// @grant        none
+// @connect      arbitterminal.github.io
+// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links-v1.40.6.txt
+// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links-v1.40.6.txt
+// @run-at       document-idle
+// ==/UserScript==
+
+(function () {
+  "use strict";
+
+  const BASE_URL = "https://spreadradar.net/";
+  const LIVE_SPREAD_URL = "https://spreadradar.net/api/live-spread";
+  const TARGET_WINDOW = "spreadradar_screener";
+  const DEFAULT_VIEW = "history";
+  const DEFAULT_HOURS = "24";
+  const DEFAULT_TYPE = "bbo";
+  const LIVE_POLL_MS = 350;
+  const INLINE_LIVE_POLL_MS = 333;
+  const INLINE_LIVE_LIMIT = 4;
+  const INLINE_LIVE_TTL_MS = 12000;
+
+  const DEFAULT_ORDER_USDT = 300;
+  const ORDER_SIZE_OPTIONS = [100, 200, 300, 400, 500];
+  const ORDER_SIZE_STORAGE_KEY = "spreadradar-links-order-usdt";
+  const ORDER_POSITION_STORAGE_KEY = "spreadradar-links-order-position";
+
+  const STYLE_ID = "spreadradar-links-clean-style";
+  const TOAST_ID = "spreadradar-links-toast";
+  const LIVE_TIP_ID = "spreadradar-live-tip";
+  const ORDER_CONTROL_ID = "spreadradar-order-control";
+
+  const TOP_LAYER_Z_INDEX = 2147483647;
+  const ORDER_BUTTON_WIDTH = 66;
+  const ORDER_BUTTON_HEIGHT = 35;
+  const ORDER_PANEL_WIDTH = 214;
+  const ORDER_PANEL_GAP = 10;
+  const ORDER_EDGE_PADDING = 0;
+  const ORDER_ATTACH_GAP = 0;
+
+  const liveState = {
+    tickerEl: null,
+    card: null,
+    routeKey: "",
+    orderQtyBase: null,
+    orderUsdt: DEFAULT_ORDER_USDT,
+    timer: 0,
+    controller: null,
+    inFlight: false
+  };
+
+  const inlineLiveState = {
+    timer: 0,
+    inFlight: false,
+    orderQtyByRoute: Object.create(null),
+    lastByRoute: Object.create(null)
+  };
+
+  const EXCHANGE_MAP = {
+    BINANCE: "binance",
+    MEXC: "mexc",
+    GATE: "gate",
+    GATEIO: "gate",
+    "GATE.IO": "gate",
+    BINGX: "bingx",
+    BING: "bingx",
+    ASTERDEX: "aster",
+    ASTER: "aster",
+    "ASTER.DEX": "aster"
+  };
+
+  const EXCHANGE_PATTERN = "BINANCE|MEXC|GATEIO|GATE\\.IO|GATE|BINGX|BING|ASTERDEX|ASTER\\.DEX|ASTER";
+
+  function injectStyle() {
+    let style = document.getElementById(STYLE_ID);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
+
+    style.textContent = `
+      .trade-card .trade-details strong,
+      .signals-list .signal-card [data-help="signal.symbol"],
+      .signals-list .signal-card td.symbol,
+      .signals-list .signal-card .header .symbol{
+        cursor:pointer!important;
+        color:inherit!important;
+        text-decoration:underline dotted rgba(13,110,253,.65)!important;
+        text-underline-offset:2px!important;
+      }
+      .trade-card .trade-details strong:hover,
+      .signals-list .signal-card [data-help="signal.symbol"]:hover,
+      .signals-list .signal-card td.symbol:hover,
+      .signals-list .signal-card .header .symbol:hover{
+        color:#0d6efd!important;
+      }
+      #${LIVE_TIP_ID}{
+        position:fixed;
+        z-index:${TOP_LAYER_Z_INDEX};
+        min-width:220px;
+        max-width:260px;
+        padding:9px 11px;
+        border-radius:7px;
+        background:rgba(17,24,39,.96);
+        border:1px solid rgba(255,255,255,.14);
+        color:#fff;
+        font:14.4px/1.35 Arial,system-ui,sans-serif;
+        box-shadow:0 8px 22px rgba(0,0,0,.28);
+        pointer-events:none;
+        white-space:nowrap;
+      }
+      #${LIVE_TIP_ID} .sr-live-row{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin:2px 0;
+        white-space:nowrap;
+      }
+      #${LIVE_TIP_ID} .sr-live-title{font-weight:800;color:#cbd5e1;letter-spacing:.02em;}
+      #${LIVE_TIP_ID} .sr-live-money{font-weight:900;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-value{font-weight:700;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-warning{font-weight:700;color:#facc15;}
+      #${LIVE_TIP_ID} .sr-live-depth-ok{font-weight:900;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-depth-no{font-weight:900;color:#ff7b7b;}
+      #${LIVE_TIP_ID} .sr-live-muted{color:#aeb8c6;}
+      #${LIVE_TIP_ID} .sr-live-spread{font-size:1.3em;font-weight:900;line-height:1;}
+      #${LIVE_TIP_ID} .sr-live-chart{
+        width:220px;
+        height:34px;
+        margin-top:8px;
+        overflow:visible;
+      }
+      #${LIVE_TIP_ID} .sr-live-chart svg{display:block;width:100%;height:100%;overflow:visible;}
+      #${LIVE_TIP_ID} .sr-chart-zero{stroke:rgba(96,165,250,.62);stroke-width:1.15;stroke-dasharray:3 3;}
+      #${LIVE_TIP_ID} .sr-chart-line{fill:none;stroke:#facc15;stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round;}
+      #${LIVE_TIP_ID} .sr-chart-fill{fill:rgba(250,204,21,.12);stroke:none;}
+      .signals-list .signal-card .spreadradar-inline-live-host{
+        white-space:normal!important;
+        overflow:visible!important;
+        text-overflow:clip!important;
+        vertical-align:top!important;
+      }
+      .signals-list .signal-card table.exchange-info td.spreadradar-inline-live-host{
+        min-width:62px!important;
+        width:62px!important;
+        max-width:72px!important;
+        padding:2px 8px 2px 2px!important;
+        vertical-align:middle!important;
+        background:transparent!important;
+        border:0!important;
+        border-radius:0!important;
+        box-shadow:none!important;
+      }
+      .spreadradar-inline-live{
+        display:inline-block!important;
+        margin-top:2px!important;
+        padding:1px 5px!important;
+        max-width:calc(100% - 6px)!important;
+        border-radius:5px!important;
+        background:rgba(17,24,39,.92)!important;
+        border:1px solid rgba(148,163,184,.28)!important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 2px rgba(15,23,42,.18)!important;
+        font:800 15px/1 Arial,system-ui,sans-serif!important;
+        letter-spacing:.01em!important;
+        text-decoration:none!important;
+        text-shadow:none!important;
+      }
+      .spreadradar-inline-live.is-positive{color:#4ade80!important;text-shadow:0 0 6px rgba(74,222,128,.22)!important;}
+      .spreadradar-inline-live.is-warning{color:#facc15!important;}
+      .spreadradar-inline-live.is-negative{color:#ef4444!important;}
+      .spreadradar-inline-live.is-muted{color:#94a3b8!important;}
+      .spreadradar-inline-live.is-hidden{display:none!important;}
+      #${TOAST_ID}{
+        position:fixed;
+        left:50%;
+        bottom:24px;
+        transform:translateX(-50%);
+        z-index:${TOP_LAYER_Z_INDEX};
+        padding:9px 14px;
+        border-radius:10px;
+        background:rgba(20,20,24,.94);
+        color:#fff;
+        font:13px/1.3 Arial,system-ui,sans-serif;
+        box-shadow:0 10px 30px rgba(0,0,0,.35);
+        pointer-events:none;
+      }
+      #${ORDER_CONTROL_ID}{
+        position:fixed;
+        left:auto;
+        right:16px;
+        top:72px;
+        z-index:${TOP_LAYER_Z_INDEX - 1};
+        width:${ORDER_BUTTON_WIDTH}px!important;
+        min-width:${ORDER_BUTTON_WIDTH}px!important;
+        max-width:${ORDER_BUTTON_WIDTH}px!important;
+        height:${ORDER_BUTTON_HEIGHT}px!important;
+        min-height:${ORDER_BUTTON_HEIGHT}px!important;
+        max-height:${ORDER_BUTTON_HEIGHT}px!important;
+        font:13px/1.35 Arial,sans-serif;
+        color:#fff;
+        user-select:none;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-wrap{display:block;position:relative;width:${ORDER_BUTTON_WIDTH}px;height:${ORDER_BUTTON_HEIGHT}px;}
+      #${ORDER_CONTROL_ID} .sr-order-main{
+        appearance:none!important;
+        -webkit-appearance:none!important;
+        position:relative!important;
+        width:${ORDER_BUTTON_WIDTH}px!important;
+        min-width:${ORDER_BUTTON_WIDTH}px!important;
+        max-width:${ORDER_BUTTON_WIDTH}px!important;
+        height:${ORDER_BUTTON_HEIGHT}px!important;
+        min-height:${ORDER_BUTTON_HEIGHT}px!important;
+        max-height:${ORDER_BUTTON_HEIGHT}px!important;
+        box-sizing:border-box!important;
+        display:inline-flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        flex-direction:row!important;
+        gap:1px!important;
+        border:1px solid rgba(134,239,172,.42)!important;
+        border-radius:10px!important;
+        background:linear-gradient(180deg,#43b85c 0%,#2f9f49 100%)!important;
+        color:#fff!important;
+        padding:0 8px!important;
+        margin:0!important;
+        box-shadow:0 2px 7px rgba(15,23,42,.28),inset 0 1px 0 rgba(255,255,255,.2)!important;
+        cursor:grab!important;
+        touch-action:none!important;
+        overflow:hidden!important;
+      }
+      #${ORDER_CONTROL_ID}.sr-order-dragging .sr-order-main{cursor:grabbing!important;opacity:.92;}
+      #${ORDER_CONTROL_ID} .sr-order-main:hover{
+        border-color:rgba(187,247,208,.74)!important;
+        box-shadow:0 3px 9px rgba(15,23,42,.34),0 0 0 2px rgba(34,197,94,.16),inset 0 1px 0 rgba(255,255,255,.25)!important;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-caption{display:none!important;}
+      #${ORDER_CONTROL_ID} .sr-order-current{font:800 15px/${ORDER_BUTTON_HEIGHT}px Arial,Helvetica,sans-serif!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.22);}
+      #${ORDER_CONTROL_ID} .sr-order-panel{
+        display:none;
+        position:absolute;
+        right:calc(100% + ${ORDER_PANEL_GAP}px);
+        top:0;
+        width:${ORDER_PANEL_WIDTH}px;
+        padding:8px;
+        border-radius:8px;
+        background:rgba(17,24,39,.97);
+        border:1px solid rgba(255,255,255,.14);
+        box-shadow:0 10px 28px rgba(0,0,0,.32);
+      }
+      #${ORDER_CONTROL_ID}.sr-order-panel-right .sr-order-panel{right:auto;left:calc(100% + ${ORDER_PANEL_GAP}px);}
+      #${ORDER_CONTROL_ID}.sr-order-panel-up .sr-order-panel{top:auto;bottom:0;}
+      #${ORDER_CONTROL_ID}:hover .sr-order-panel,
+      #${ORDER_CONTROL_ID}.sr-order-open .sr-order-panel{display:block;}
+      #${ORDER_CONTROL_ID} .sr-order-options{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+      #${ORDER_CONTROL_ID} .sr-order-option{
+        border:1px solid rgba(255,255,255,.16);
+        background:rgba(255,255,255,.08);
+        color:#fff;
+        border-radius:6px;
+        padding:6px 4px;
+        cursor:pointer;
+        font:700 12px/1 Arial,sans-serif;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-option:hover{background:rgba(255,255,255,.14);}
+      #${ORDER_CONTROL_ID} .sr-order-option.is-active{border-color:#4ade80;background:rgba(74,222,128,.18);color:#bbf7d0;}    `;
+  }
+
+  function showMessage(text) {
+    let toast = document.getElementById(TOAST_ID);
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = TOAST_ID;
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    clearTimeout(toast._srTimer);
+    toast._srTimer = setTimeout(() => toast.remove(), 2500);
+  }
+
+  function normalizeOrderUsdt(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return DEFAULT_ORDER_USDT;
+    const rounded = Math.round(n);
+    return ORDER_SIZE_OPTIONS.includes(rounded) ? rounded : DEFAULT_ORDER_USDT;
+  }
+
+  function getStoredOrderUsdt() {
+    return normalizeOrderUsdt(localStorage.getItem(ORDER_SIZE_STORAGE_KEY) || DEFAULT_ORDER_USDT);
+  }
+
+  function saveOrderUsdt(value) {
+    localStorage.setItem(ORDER_SIZE_STORAGE_KEY, String(normalizeOrderUsdt(value)));
+  }
+
+  function getLiveOrderUsdt() {
+    return normalizeOrderUsdt(liveState.orderUsdt || getStoredOrderUsdt());
+  }
+
+  function getStoredOrderPosition() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(ORDER_POSITION_STORAGE_KEY) || "null");
+      if (!raw || typeof raw !== "object") return null;
+      const left = Number(raw.left);
+      const top = Number(raw.top);
+      if (Number.isFinite(left) && Number.isFinite(top)) return { left, top };
+      if (raw.side && Number.isFinite(Number(raw.top))) {
+        const fallbackLeft = raw.side === "right"
+          ? window.innerWidth - ORDER_BUTTON_WIDTH - 16
+          : 16;
+        return { left: fallbackLeft, top: Number(raw.top) };
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clampOrderPosition(left, top) {
+    const root = document.getElementById(ORDER_CONTROL_ID);
+    const width = root?.offsetWidth || ORDER_BUTTON_WIDTH;
+    const height = root?.offsetHeight || ORDER_BUTTON_HEIGHT;
+    const maxLeft = Math.max(ORDER_EDGE_PADDING, window.innerWidth - width - ORDER_EDGE_PADDING);
+    const maxTop = Math.max(ORDER_EDGE_PADDING, window.innerHeight - height - ORDER_EDGE_PADDING);
+    return {
+      left: Math.min(maxLeft, Math.max(ORDER_EDGE_PADDING, Math.round(Number(left) || 0))),
+      top: Math.min(maxTop, Math.max(ORDER_EDGE_PADDING, Math.round(Number(top) || 0)))
+    };
+  }
+
+  function updateOrderPanelDirection(root, left, top) {
+    if (!root) return;
+    root.classList.toggle("sr-order-panel-right", left < ORDER_PANEL_WIDTH + ORDER_PANEL_GAP + ORDER_EDGE_PADDING);
+    root.classList.toggle("sr-order-panel-up", top > window.innerHeight - 150);
+  }
+
+  function applyOrderPosition(root, pos) {
+    if (!root) return;
+    const fallback = getStoredOrderPosition() || { left: window.innerWidth - ORDER_BUTTON_WIDTH - 16, top: 72 };
+    const next = clampOrderPosition(pos?.left ?? fallback.left, pos?.top ?? fallback.top);
+    root.style.left = `${next.left}px`;
+    root.style.top = `${next.top}px`;
+    root.style.right = "auto";
+    updateOrderPanelDirection(root, next.left, next.top);
+  }
+
+  function saveOrderPosition(root, pos) {
+    const next = clampOrderPosition(pos?.left, pos?.top);
+    localStorage.setItem(ORDER_POSITION_STORAGE_KEY, JSON.stringify(next));
+    applyOrderPosition(root, next);
+  }
+
+  function updateOrderControl(root = document.getElementById(ORDER_CONTROL_ID)) {
+    if (!root) return;
+    const current = getStoredOrderUsdt();
+    const valueEl = root.querySelector(".sr-order-current");
+    if (valueEl) valueEl.textContent = `${current}$`;
+    root.querySelectorAll(".sr-order-option").forEach(btn => {
+      btn.classList.toggle("is-active", Number(btn.dataset.value) === current);
+    });
+    const rect = root.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) applyOrderPosition(root, { left: rect.left, top: rect.top });
+  }
+
+  function setOrderUsdt(value) {
+    const next = normalizeOrderUsdt(value);
+    saveOrderUsdt(next);
+    liveState.orderUsdt = next;
+    liveState.orderQtyBase = null;
+    updateOrderControl();
+    if (liveState.routeKey) pollLiveSpread();
+  }
+
+  function installOrderDrag(root, handle) {
+    if (!root || !handle || root.dataset.dragReady === "true") return;
+    root.dataset.dragReady = "true";
+
+    let drag = null;
+    let suppressNextClick = false;
+
+    handle.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      const rect = root.getBoundingClientRect();
+      drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startLeft: rect.left,
+        startTop: rect.top,
+        moved: false
+      };
+      handle.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      drag.moved = true;
+      suppressNextClick = true;
+      root.classList.add("sr-order-dragging");
+      root.classList.remove("sr-order-open");
+      applyOrderPosition(root, { left: drag.startLeft + dx, top: drag.startTop + dy });
+      event.preventDefault();
+    });
+
+    const finishDrag = event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      handle.releasePointerCapture?.(event.pointerId);
+      root.classList.remove("sr-order-dragging");
+      if (drag.moved) {
+        const rect = root.getBoundingClientRect();
+        saveOrderPosition(root, { left: rect.left, top: rect.top });
+        setTimeout(() => { suppressNextClick = false; }, 0);
+      }
+      drag = null;
+    };
+
+    handle.addEventListener("pointerup", finishDrag);
+    handle.addEventListener("pointercancel", finishDrag);
+
+    handle.addEventListener("click", event => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      root.classList.toggle("sr-order-open");
+    }, true);
+  }
+
+  function ensureOrderControl() {
+    let root = document.getElementById(ORDER_CONTROL_ID);
+    if (!root) {
+      root = document.createElement("div");
+      root.id = ORDER_CONTROL_ID;
+      root.innerHTML = `
+        <div class="sr-order-wrap">
+          <button type="button" class="sr-order-main" title="SpreadRadar OrderSize">
+            <span class="sr-order-caption">Order</span>
+            <span class="sr-order-current"></span>
+          </button>
+          <div class="sr-order-panel">
+            <div class="sr-order-options">
+              ${ORDER_SIZE_OPTIONS.map(value => `<button type="button" class="sr-order-option" data-value="${value}">${value}</button>`).join("")}
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(root);
+      root.querySelectorAll(".sr-order-option").forEach(btn => {
+        btn.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOrderUsdt(btn.dataset.value);
+          root.classList.remove("sr-order-open");
+        });
+      });
+      installOrderDrag(root, root.querySelector(".sr-order-main"));
+    }
+    applyOrderPosition(root, getStoredOrderPosition());
+    updateOrderControl(root);
+    return root;
+  }
+
+  function normalizeSymbol(raw) {
+    const text = String(raw || "").trim().toUpperCase();
+    const match = text.match(/[A-Z0-9]+_?USDT|[A-Z0-9]+/);
+    if (!match) return "";
+    return match[0].replace(/[^A-Z0-9_]/g, "");
+  }
+
+  function normalizeExchange(raw) {
+    const key = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9.]/g, "");
+    return EXCHANGE_MAP[key] || "";
+  }
+
+  function normalizeAutoCoin(raw) {
+    return String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/(?:USDT|USD|USDC)$/, "");
+  }
+
+  function normalizeAutoExchange(raw) {
+    const key = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^GATEIO$/, "GATE");
+    if (key === "GATE.IO") return "gateio";
+    if (key === "GATE") return "gateio";
+    if (key === "BING") return "bingx";
+    if (key === "ASTERDEX") return "asterdex";
+    if (key === "ASTER") return "asterdex";
+    if (key === "ASTER.DEX") return "asterdex";
+    return key.toLowerCase();
+  }
+
+  function getFastTradeExchangeVariants(exchange) {
+    if (exchange === "gateio") return ["gateio", "gate"];
+    if (exchange === "gate") return ["gate", "gateio"];
+    return [exchange];
+  }
+
+  function clearFastTradeUrl() {
+    const cleanParams = new URLSearchParams(window.location.search);
+    [
+      "ft_auto", "fast_auto",
+      "coin", "sym", "ticker",
+      "ex1", "exchange1", "long",
+      "ex2", "exchange2", "short",
+      "side", "signalSpread", "spread", "os"
+    ].forEach(key => cleanParams.delete(key));
+    const query = cleanParams.toString();
+    window.history.replaceState({}, document.title, window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+  }
+
+  async function runFastTradeUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("ft_auto") !== "1" && params.get("fast_auto") !== "1") return;
+
+    const setupKey = window.location.search;
+    if (window.__spreadRadarFastTradeUrlKey === setupKey) return;
+    const consumedKey = "spreadradar_fast_trade_url_consumed_" + setupKey;
+    try {
+      if (sessionStorage.getItem(consumedKey) === "1") return;
+      sessionStorage.setItem(consumedKey, "1");
+    } catch (_) {}
+    window.__spreadRadarFastTradeUrlKey = setupKey;
+
+    const coin = normalizeAutoCoin(params.get("coin") || params.get("sym") || params.get("ticker"));
+    const side = String(params.get("side") || "LONG").trim().toUpperCase() === "SHORT" ? "SHORT" : "LONG";
+    const exch1Name = normalizeAutoExchange(params.get("ex1") || params.get("exchange1") || params.get("long"));
+    const exch2Name = normalizeAutoExchange(params.get("ex2") || params.get("exchange2") || params.get("short"));
+    const signalSpread = Number(String(params.get("signalSpread") || params.get("spread") || params.get("os") || "0").replace(",", "."));
+
+    if (!coin || !exch1Name || !exch2Name) {
+      clearFastTradeUrl();
+      alert("Fast Trade URL failed: coin or exchanges are missing");
+      return;
+    }
+
+    const token = localStorage.getItem("token") || "";
+    const endPoint = String(localStorage.getItem("endPoint") || "").replace(/\/+$/, "");
+    if (!token || !endPoint) {
+      clearFastTradeUrl();
+      alert("Fast Trade URL failed: ArbitTerminal login session is missing");
+      return;
+    }
+
+    try {
+      const postFastStart = async (ex1, ex2) => {
+        const response = await fetch(`${endPoint}/trading/fastStart`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            coin,
+            exch1Name: ex1,
+            exch2Name: ex2,
+            side,
+            signalSpread: Number.isFinite(signalSpread) ? signalSpread : 0
+          })
+        });
+        const data = await response.json().catch(() => null);
+        return { response, data, ex1, ex2 };
+      };
+
+      let result = await postFastStart(exch1Name, exch2Name);
+      const firstError = result.data?.msg || `Fast Trade failed: HTTP ${result.response.status}`;
+      const shouldRetryGate = (!result.response.ok || result.data?.res === "Error")
+        && /calculate\s+order\s+size/i.test(firstError)
+        && [exch1Name, exch2Name].some(ex => ex === "gateio" || ex === "gate");
+
+      if (shouldRetryGate) {
+        const ex1Variants = getFastTradeExchangeVariants(exch1Name);
+        const ex2Variants = getFastTradeExchangeVariants(exch2Name);
+        retry:
+        for (const ex1 of ex1Variants) {
+          for (const ex2 of ex2Variants) {
+            if (ex1 === exch1Name && ex2 === exch2Name) continue;
+            result = await postFastStart(ex1, ex2);
+            if (result.response.ok && result.data?.res !== "Error") break retry;
+          }
+        }
+      }
+
+      if (!result.response.ok || result.data?.res === "Error") {
+        clearFastTradeUrl();
+        alert(result.data?.msg || firstError);
+        return;
+      }
+
+      clearFastTradeUrl();
+
+      // ArbitTerminal can create the card on the backend, but the current SPA view
+      // may not redraw the active trading cards until a full page refresh.
+      // A hard reload after a successful fastStart is more reliable than trying
+      // to click a random Refresh button in the UI. The URL is cleaned first,
+      // so ft_auto will not run again after reload.
+      setTimeout(() => {
+        window.location.reload();
+      }, 900);
+    } catch (err) {
+      console.error("SpreadRadar Fast Trade URL failed:", err);
+      clearFastTradeUrl();
+      alert("Fast Trade URL failed. Check connection.");
+    }
+  }
+
+  function cleanInlineLiveText(host) {
+    if (!host) return "";
+    const clone = host.cloneNode(true);
+    clone.querySelectorAll?.(".spreadradar-inline-live").forEach(node => node.remove());
+    return String(clone.textContent || "").trim();
+  }
+
+  function getSignalTickerHost(card) {
+    return card?.querySelector?.('[data-help="signal.symbol"], td.symbol, .header .symbol, .symbol') || null;
+  }
+
+  function getSymbolFromCard(card) {
+    const signalSymbol = cleanInlineLiveText(getSignalTickerHost(card));
+    const tradeSymbol = card?.querySelector?.(".trade-details strong")?.textContent;
+    const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ");
+    const fallback = (text.match(/([^\s|:()[\]{}<>]+_?USDT)/i) || [])[1] || "";
+    return normalizeSymbol(signalSymbol || tradeSymbol || fallback);
+  }
+
+  function getRouteExchanges(card) {
+    let long = normalizeExchange(card?.querySelector?.(".arbitrage-info .long, td.long, .long")?.textContent || "");
+    let short = normalizeExchange(card?.querySelector?.(".arbitrage-info .short, td.short, .short")?.textContent || "");
+    const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ").trim();
+
+    if (!long || !short) {
+      const arrowMatches = Array.from(text.matchAll(new RegExp(`\\b(${EXCHANGE_PATTERN})\\b\\s*([↑↓])`, "gi")));
+      for (const match of arrowMatches) {
+        const exchange = normalizeExchange(match[1]);
+        if (!exchange) continue;
+        if (match[2] === "↑" && !long) long = exchange;
+        if (match[2] === "↓" && !short) short = exchange;
+      }
+    }
+
+    if (!long || !short) {
+      const found = [];
+      const exchangeRegex = new RegExp(`\\b(${EXCHANGE_PATTERN})\\b`, "gi");
+      for (const match of text.matchAll(exchangeRegex)) {
+        const exchange = normalizeExchange(match[1]);
+        if (exchange && !found.includes(exchange)) found.push(exchange);
+      }
+      if (found.length >= 2) {
+        long ||= found[0];
+        short ||= found[1];
+      }
+    }
+
+    return { long, short };
+  }
+
+  function formatRouteSymbol(ticker) {
+    const symbol = normalizeSymbol(ticker);
+    if (!symbol) return "";
+    if (/_USDT$/i.test(symbol)) return symbol;
+    if (/USDT$/i.test(symbol)) return `${symbol.slice(0, -4)}_USDT`;
+    return symbol;
+  }
+
+  function getRouteKey(card) {
+    const ticker = formatRouteSymbol(getSymbolFromCard(card));
+    const { long, short } = getRouteExchanges(card);
+    return ticker && long && short ? `${ticker}:${long}:${short}` : "";
+  }
+
+  function buildUrl(route) {
+    const params = new URLSearchParams();
+    params.set("ticker", route.ticker);
+    params.set("long", route.long);
+    params.set("short", route.short);
+    params.set("view", DEFAULT_VIEW);
+    params.set("hours", DEFAULT_HOURS);
+    params.set("type", DEFAULT_TYPE);
+    params.set("order_usdt", String(getStoredOrderUsdt()));
+    return `${BASE_URL}?${params.toString()}`;
+  }
+
+  function openSpreadRadar(card) {
+    const ticker = getSymbolFromCard(card);
+    const { long, short } = getRouteExchanges(card);
+
+    if (!ticker) {
+      showMessage("Cannot open SpreadRadar: ticker is missing");
+      return;
+    }
+    if (!long || !short) {
+      showMessage("Cannot open SpreadRadar: route exchanges are missing");
+      return;
+    }
+
+    const win = window.open(buildUrl({ ticker, long, short }), TARGET_WINDOW);
+    if (win) try { win.focus(); } catch (_) {}
+  }
+
+  function findClickableTicker(target) {
+    if (!(target instanceof Element)) return null;
+    return target.closest(
+      ".trade-card .trade-details strong," +
+      ".signals-list .signal-card [data-help='signal.symbol']," +
+      ".signals-list .signal-card td.symbol," +
+      ".signals-list .signal-card .header .symbol"
+    );
+  }
+
+  function findSignalTicker(target) {
+    if (!(target instanceof Element)) return null;
+    return target.closest(
+      ".signals-list .signal-card [data-help='signal.symbol']," +
+      ".signals-list .signal-card td.symbol," +
+      ".signals-list .signal-card .header .symbol"
+    );
+  }
+
+  function ensureLiveTip() {
+    let tip = document.getElementById(LIVE_TIP_ID);
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = LIVE_TIP_ID;
+      tip.innerHTML = '<div class="sr-live-muted">Loading live spread...</div>';
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+
+  function positionLiveTip(anchor) {
+    const tip = ensureLiveTip();
+    const rect = anchor.getBoundingClientRect();
+    const top = Math.max(8, Math.round(rect.bottom + 8));
+    const left = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, Math.round(rect.left)));
+    tip.style.top = `${top}px`;
+    tip.style.left = `${left}px`;
+  }
+
+  function renderLiveTip(html) {
+    const tip = ensureLiveTip();
+    tip.innerHTML = html;
+    if (liveState.tickerEl) positionLiveTip(liveState.tickerEl);
+  }
+
+  function stopLiveHover() {
+    if (liveState.timer) clearInterval(liveState.timer);
+    liveState.timer = 0;
+    liveState.controller?.abort?.();
+    liveState.controller = null;
+    liveState.inFlight = false;
+    liveState.tickerEl = null;
+    liveState.card = null;
+    liveState.routeKey = "";
+    liveState.orderQtyBase = null;
+    document.getElementById(LIVE_TIP_ID)?.remove();
+  }
+
+  function formatPct(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? `${n.toFixed(3)}%` : "-";
+  }
+
+  function formatAge(tsMs) {
+    const ts = Number(tsMs);
+    if (!Number.isFinite(ts) || ts <= 0) return "";
+    const ageSec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    return `${ageSec}s ago`;
+  }
+
+  function formatUsdt(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? `${n.toFixed(0)}$` : `${getLiveOrderUsdt()}$`;
+  }
+
+  function renderSpreadChart(points) {
+    const values = (Array.isArray(points) ? points : [])
+      .filter(point => point?.entry_order_depth_ok !== false)
+      .slice(-10)
+      .map(point => Number(point?.entry_spread_pct))
+      .filter(value => Number.isFinite(value));
+    if (values.length < 2) return "";
+
+    const width = 220;
+    const height = 34;
+    const leftPad = 5;
+    const rightPad = 5;
+    const topPad = 7;
+    const bottomPad = 7;
+    const rawMin = Math.min(...values);
+    const rawMax = Math.max(...values);
+    let min = Math.min(0, rawMin);
+    let max = Math.max(0, rawMax);
+    let range = max - min;
+    if (range < 0.001) {
+      min -= 0.001;
+      max += 0.001;
+      range = max - min;
+    }
+    const padding = Math.max(range * 0.12, 0.01);
+    min -= padding;
+    max += padding;
+    range = max - min;
+    const xStep = values.length > 1 ? (width - leftPad - rightPad) / (values.length - 1) : 0;
+    const yFor = (value) => {
+      const ratio = (value - min) / range;
+      return height - bottomPad - ratio * (height - topPad - bottomPad);
+    };
+    const linePoints = values
+      .map((value, index) => `${(leftPad + index * xStep).toFixed(1)},${yFor(value).toFixed(1)}`)
+      .join(" ");
+    const last = values[values.length - 1];
+    const lineColor = last < 0 ? "#facc15" : "#4ade80";
+    const fillColor = last < 0 ? "rgba(250,204,21,.12)" : "rgba(74,222,128,.12)";
+    const baselineY = yFor(0).toFixed(1);
+    const areaPoints = `${leftPad},${baselineY} ${linePoints} ${width - rightPad},${baselineY}`;
+
+    return `
+      <div class="sr-live-chart" aria-hidden="true">
+        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+          <line class="sr-chart-zero" x1="${leftPad}" y1="${baselineY}" x2="${width - rightPad}" y2="${baselineY}"></line>
+          <polygon class="sr-chart-fill" points="${areaPoints}" style="fill:${fillColor}"></polygon>
+          <polyline class="sr-chart-line" points="${linePoints}" style="stroke:${lineColor}"></polyline>
+        </svg>
+      </div>
+    `;
+  }
+
+  async function pollLiveSpread() {
+    if (!liveState.routeKey || liveState.inFlight) return;
+    liveState.inFlight = true;
+    liveState.controller?.abort?.();
+    liveState.controller = new AbortController();
+
+    try {
+      const orderUsdt = getLiveOrderUsdt();
+      const params = new URLSearchParams({
+        route_key: liveState.routeKey,
+        limit: "10",
+        use_raw_depth: "1"
+      });
+      if (liveState.orderQtyBase) params.set("order_qty_base", String(liveState.orderQtyBase));
+
+      const response = await fetch(`${LIVE_SPREAD_URL}?${params}`, {
+        credentials: "include",
+        signal: liveState.controller.signal
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 402 || data?.error === "subscription_required") {
+          renderLiveTip('<div class="sr-live-muted">SpreadRadar login/subscription required</div>');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const points = Array.isArray(data?.points) ? data.points : [];
+      const last = points[points.length - 1];
+      if (!last) {
+        renderLiveTip('<div class="sr-live-muted">No live data</div>');
+        return;
+      }
+
+      if (!liveState.orderQtyBase) {
+        const longAsk = Number(last.long_ask);
+        if (Number.isFinite(longAsk) && longAsk > 0) {
+          liveState.orderQtyBase = orderUsdt / longAsk;
+          liveState.inFlight = false;
+          return await pollLiveSpread();
+        }
+      }
+
+      const orderLabel = formatUsdt(last.order_notional_usdt || orderUsdt);
+      const isDepthNo = last.entry_order_depth_ok === false;
+      const depthText = isDepthNo
+        ? '<span class="sr-live-title">DEPTH:</span> <span class="sr-live-depth-no">NO</span>'
+        : '<span class="sr-live-title">DEPTH:</span> <span class="sr-live-depth-ok">OK</span>';
+      const openClass = Number(last.entry_spread_pct) < 0 ? "sr-live-warning" : "sr-live-value";
+      const openValueHtml = isDepthNo
+        ? ""
+        : `<span class="${openClass} sr-live-spread">${formatPct(last.entry_spread_pct)}</span>`;
+      const chartHtml = renderSpreadChart(points);
+
+      renderLiveTip(`
+        <div class="sr-live-row"><span><span class="sr-live-title">OPEN:</span> <span class="sr-live-money">${orderLabel}</span></span>${openValueHtml}</div>
+        <div class="sr-live-row"><span class="sr-live-label">${depthText}</span><span class="sr-live-muted">${formatAge(last.ts_ms)}</span></div>
+        ${chartHtml}
+      `);
+    } catch (err) {
+      if (err?.name !== "AbortError") renderLiveTip('<div class="sr-live-muted">Live unavailable</div>');
+    } finally {
+      liveState.inFlight = false;
+    }
+  }
+
+
+  function isSignalPanelActiveForInlineLive() {
+    if (document.body?.classList?.contains("signals-hidden") || document.body?.classList?.contains("mix-at-hide-main-ui")) return false;
+
+    const panel = document.querySelector(".signals-list");
+    if (!(panel instanceof HTMLElement)) return false;
+    const rect = panel.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    if (!panel.querySelector(".signal-card")) return false;
+
+    const style = window.getComputedStyle(panel);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
+
+    // MIX right-side Signal panel.
+    if (document.body?.classList?.contains("mix-at-signal-controls-on")) return true;
+
+    // Standalone/right panel and normal ArbitTerminal grid/list position.
+    // We only require that .signals-list is visible and contains visible signal cards.
+    // getInlineSignalCards() below will still limit processing to the first 4 visible cards.
+    return true;
+  }
+
+  function isVisibleSignalCardInPanel(card, panel) {
+    if (!(card instanceof HTMLElement) || !card.isConnected) return false;
+    if (card.dataset.mixAtHidden === "true" || card.dataset.spreadradarHidden === "true") return false;
+
+    const style = getComputedStyle(card);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
+
+    const rect = card.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+
+    const panelRect = panel?.getBoundingClientRect?.();
+    if (panelRect && panelRect.width > 0 && panelRect.height > 0) {
+      return rect.bottom > panelRect.top && rect.top < panelRect.bottom && rect.right > panelRect.left && rect.left < panelRect.right;
+    }
+
+    return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+  }
+
+  function getInlineSignalCards() {
+    if (!isSignalPanelActiveForInlineLive()) return [];
+    const panel = document.querySelector(".signals-list");
+    if (!(panel instanceof HTMLElement)) return [];
+
+    return Array.from(panel.querySelectorAll(".signal-card"))
+      .filter(card => isVisibleSignalCardInPanel(card, panel))
+      .slice(0, INLINE_LIVE_LIMIT);
+  }
+
+  function getSignalInlineLiveHost(card) {
+    if (!card) return null;
+
+    const existingHost = card.querySelector?.("table.exchange-info td.spreadradar-inline-live-host");
+    if (existingHost) return existingHost;
+
+    // Actual ArbitTerminal signal-card structure currently has no data-help on this row:
+    // <table class="exchange-info"><tbody><tr><td></td><td class="long">...</td><td class="short">...</td></tr>...</tbody></table>
+    const firstCell = card.querySelector?.("table.exchange-info tbody tr:first-child > td:first-child, table.exchange-info tr:first-child > td:first-child");
+    if (firstCell instanceof HTMLElement && !firstCell.classList.contains("long") && !firstCell.classList.contains("short")) {
+      return firstCell;
+    }
+
+    const exchangeRow = card.querySelector?.('table.exchange-info tr[data-help="signal.exchanges"]');
+    const markedFirstCell = exchangeRow?.querySelector?.(":scope > td:first-child, :scope > th:first-child");
+    if (markedFirstCell instanceof HTMLElement && !markedFirstCell.classList.contains("long") && !markedFirstCell.classList.contains("short")) {
+      return markedFirstCell;
+    }
+
+    const row = card.querySelector?.("table.exchange-info tbody tr, table.exchange-info tr");
+    const cells = Array.from(row?.children || []).filter(el => el instanceof HTMLElement && /^(TD|TH)$/i.test(el.tagName));
+    const cleanCellText = (el) => cleanInlineLiveText(el);
+    const emptyCell = cells.find(el => !el.classList.contains("short") && !el.classList.contains("long") && cleanCellText(el) === "");
+
+    return emptyCell || getSignalTickerHost(card);
+  }
+
+  function ensureInlineLiveNode(card) {
+    const host = getSignalInlineLiveHost(card);
+    if (!host) return null;
+    host.classList.add("spreadradar-inline-live-host");
+    let node = Array.from(host.children || []).find(el => el.classList?.contains("spreadradar-inline-live"));
+    if (!node) {
+      node = document.createElement("span");
+      node.className = "spreadradar-inline-live is-muted";
+      host.appendChild(node);
+    }
+    return node;
+  }
+
+  function setInlineLiveNode(card, text, className, routeKey = "") {
+    const node = ensureInlineLiveNode(card);
+    if (!node) return;
+    node.className = `spreadradar-inline-live ${className || "is-muted"}`;
+    node.textContent = text;
+    node.dataset.spreadradarInlineLiveUpdatedAt = String(Date.now());
+    if (routeKey) node.dataset.spreadradarInlineLiveRouteKey = routeKey;
+  }
+
+  function removeInlineLiveNode(card) {
+    const host = getSignalInlineLiveHost(card);
+    if (!host) return;
+    host.querySelectorAll?.(".spreadradar-inline-live").forEach(node => node.remove());
+    host.classList.remove("spreadradar-inline-live-host");
+  }
+
+  function clearInlineLiveNodes(exceptCards = new Set()) {
+    document.querySelectorAll(".spreadradar-inline-live").forEach(node => {
+      const card = node.closest?.(".signal-card");
+      if (card && exceptCards.has(card)) return;
+      const host = node.parentElement;
+      node.remove();
+      host?.classList?.remove("spreadradar-inline-live-host");
+    });
+  }
+
+  function getCachedInlineLive(routeKey) {
+    const item = inlineLiveState.lastByRoute?.[routeKey];
+    if (!item || !Number.isFinite(Number(item.expiresAt)) || Date.now() > Number(item.expiresAt)) return null;
+    return item;
+  }
+
+  function cacheInlineLive(routeKey, text, className) {
+    if (!routeKey) return;
+    inlineLiveState.lastByRoute[routeKey] = {
+      text,
+      className,
+      expiresAt: Date.now() + INLINE_LIVE_TTL_MS
+    };
+  }
+
+  async function fetchInlineLiveSpread(routeKey) {
+    const orderUsdt = getLiveOrderUsdt();
+    const qtyKey = `${routeKey}|${orderUsdt}`;
+    let orderQtyBase = Number(inlineLiveState.orderQtyByRoute?.[qtyKey]);
+    if (!Number.isFinite(orderQtyBase) || orderQtyBase <= 0) orderQtyBase = 0;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const params = new URLSearchParams({
+        route_key: routeKey,
+        limit: "1",
+        use_raw_depth: "1"
+      });
+      if (orderQtyBase > 0) params.set("order_qty_base", String(orderQtyBase));
+
+      const response = await fetch(`${LIVE_SPREAD_URL}?${params}`, { credentials: "include" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+
+      const points = Array.isArray(data?.points) ? data.points : [];
+      const last = points[points.length - 1];
+      if (!last) return { status: "empty" };
+
+      if (orderQtyBase <= 0) {
+        const longAsk = Number(last.long_ask);
+        if (Number.isFinite(longAsk) && longAsk > 0) {
+          orderQtyBase = orderUsdt / longAsk;
+          inlineLiveState.orderQtyByRoute[qtyKey] = orderQtyBase;
+          continue;
+        }
+      }
+
+      if (last.entry_order_depth_ok === false) return { status: "depth_no" };
+      const spread = Number(last.entry_spread_pct);
+      if (!Number.isFinite(spread)) return { status: "empty" };
+      return { status: "ok", spread };
+    }
+
+    return { status: "empty" };
+  }
+
+  async function updateInlineLiveSpreads() {
+    if (inlineLiveState.inFlight) return;
+    const cards = getInlineSignalCards();
+    const cardSet = new Set(cards);
+    clearInlineLiveNodes(cardSet);
+    if (!cards.length) return;
+
+    inlineLiveState.inFlight = true;
+    try {
+      for (const card of cards) {
+        const routeKey = getRouteKey(card);
+        if (!routeKey) {
+          removeInlineLiveNode(card);
+          continue;
+        }
+
+        const cached = getCachedInlineLive(routeKey);
+        if (cached) setInlineLiveNode(card, cached.text, cached.className, routeKey);
+
+        try {
+          const result = await fetchInlineLiveSpread(routeKey);
+          if (result.status !== "ok") {
+            const latestCached = getCachedInlineLive(routeKey);
+            if (latestCached) setInlineLiveNode(card, latestCached.text, latestCached.className, routeKey);
+            else removeInlineLiveNode(card);
+            continue;
+          }
+
+          const cls = result.spread >= 0.18 ? "is-positive" : (result.spread >= 0 ? "is-warning" : "is-negative");
+          const text = formatPct(result.spread);
+          cacheInlineLive(routeKey, text, cls);
+          setInlineLiveNode(card, text, cls, routeKey);
+        } catch (_) {
+          const latestCached = getCachedInlineLive(routeKey);
+          if (latestCached) setInlineLiveNode(card, latestCached.text, latestCached.className, routeKey);
+          else removeInlineLiveNode(card);
+        }
+      }
+    } finally {
+      inlineLiveState.inFlight = false;
+    }
+  }
+
+  function startInlineLiveSpreads() {
+    if (inlineLiveState.timer) return;
+    updateInlineLiveSpreads();
+    inlineLiveState.timer = setInterval(updateInlineLiveSpreads, INLINE_LIVE_POLL_MS);
+  }
+
+  function stopInlineLiveSpreads() {
+    if (inlineLiveState.timer) clearInterval(inlineLiveState.timer);
+    inlineLiveState.timer = 0;
+    inlineLiveState.inFlight = false;
+    clearInlineLiveNodes(new Set());
+  }
+
+  function startLiveHover(tickerEl) {
+    const card = tickerEl.closest(".signal-card");
+    if (!card) return;
+    const routeKey = getRouteKey(card);
+    if (!routeKey) return;
+    if (liveState.tickerEl === tickerEl && liveState.routeKey === routeKey) return;
+
+    stopLiveHover();
+    liveState.tickerEl = tickerEl;
+    liveState.card = card;
+    liveState.routeKey = routeKey;
+    liveState.orderUsdt = getStoredOrderUsdt();
+    renderLiveTip('<div class="sr-live-muted">Loading live spread...</div>');
+    pollLiveSpread();
+    liveState.timer = setInterval(pollLiveSpread, LIVE_POLL_MS);
+  }
+
+  function onHoverIn(event) {
+    const ticker = findSignalTicker(event.target);
+    if (ticker) startLiveHover(ticker);
+  }
+
+  function onHoverOut(event) {
+    const ticker = findSignalTicker(event.target);
+    if (!ticker) return;
+    const next = event.relatedTarget;
+    if (next instanceof Node && ticker.contains(next)) return;
+    stopLiveHover();
+  }
+
+  function onClick(event) {
+    const ticker = findClickableTicker(event.target);
+    if (!ticker) return;
+    const card = ticker.closest(".trade-card, .signal-card");
+    if (!card) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openSpreadRadar(card);
+  }
+
+  injectStyle();
+  ensureOrderControl();
+  startInlineLiveSpreads();
+  runFastTradeUrl();
+
+  document.addEventListener("DOMContentLoaded", ensureOrderControl, { once: true });
+  document.addEventListener("click", onClick, true);
+  document.addEventListener("mouseover", onHoverIn, true);
+  document.addEventListener("mouseout", onHoverOut, true);
+  window.addEventListener("resize", () => applyOrderPosition(document.getElementById(ORDER_CONTROL_ID), getStoredOrderPosition()), { passive: true });
+  window.addEventListener("beforeunload", stopInlineLiveSpreads, { once: true });
+})();
