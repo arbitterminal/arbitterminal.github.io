@@ -1,14 +1,14 @@
 // ==UserScript==
-// @name         ArbitTerminal: SpreadRadar Links
+// @name         AT: SpreadRadar Links
 // @namespace    https://www.arbitterminal.online/
-// @version      1.40.6-inline-live-normal-position
-// @description  Тікери з посиланнями на SpreadRadar, live spread tooltip, inline live spread, FastTrade auto URL і кнопка OrderSize
+// @version      1.40.7-inline-live-ft-open
+// @description  Тікери з посиланнями на SpreadRadar, live spread tooltip, inline live spread, FastTrade auto URL, custom Open Spread і кнопка OrderSize
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
 // @grant        none
-// @connect      arbitterminal.github.io
-// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links-v1.40.6.txt
-// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links-v1.40.6.txt
+// @connect      https://arbitterminal.github.io
+// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links.txt
+// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links.txt
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -30,6 +30,8 @@
   const ORDER_SIZE_OPTIONS = [100, 200, 300, 400, 500];
   const ORDER_SIZE_STORAGE_KEY = "spreadradar-links-order-usdt";
   const ORDER_POSITION_STORAGE_KEY = "spreadradar-links-order-position";
+  const FAST_TRADE_SPREAD_MODE_STORAGE_KEY = "spreadradar-links-fasttrade-spread-mode";
+  const FAST_TRADE_SPREAD_VALUE_STORAGE_KEY = "spreadradar-links-fasttrade-spread-value";
 
   const STYLE_ID = "spreadradar-links-clean-style";
   const TOAST_ID = "spreadradar-links-toast";
@@ -270,7 +272,45 @@
         font:700 12px/1 Arial,sans-serif;
       }
       #${ORDER_CONTROL_ID} .sr-order-option:hover{background:rgba(255,255,255,.14);}
-      #${ORDER_CONTROL_ID} .sr-order-option.is-active{border-color:#4ade80;background:rgba(74,222,128,.18);color:#bbf7d0;}    `;
+      #${ORDER_CONTROL_ID} .sr-order-option.is-active{border-color:#4ade80;background:rgba(74,222,128,.18);color:#bbf7d0;}
+      #${ORDER_CONTROL_ID} .sr-ft-spread-settings{
+        margin-top:8px;
+        padding-top:7px;
+        border-top:1px solid rgba(255,255,255,.13);
+        display:grid;
+        grid-template-columns:1fr 74px;
+        gap:7px;
+        align-items:center;
+      }
+      #${ORDER_CONTROL_ID} .sr-ft-toggle{
+        display:flex;
+        align-items:center;
+        gap:5px;
+        color:#dbeafe;
+        font:800 12px/1.2 Arial,sans-serif;
+        white-space:nowrap;
+      }
+      #${ORDER_CONTROL_ID} .sr-ft-toggle input{margin:0;}
+      #${ORDER_CONTROL_ID} .sr-ft-spread-input{
+        width:74px;
+        box-sizing:border-box;
+        border:1px solid rgba(255,255,255,.22);
+        border-radius:6px;
+        background:rgba(255,255,255,.1);
+        color:#fff;
+        padding:5px 6px;
+        font:800 12px/1 Arial,sans-serif;
+        outline:none;
+        text-align:right;
+      }
+      #${ORDER_CONTROL_ID} .sr-ft-spread-input:disabled{opacity:.55;cursor:not-allowed;}
+      #${ORDER_CONTROL_ID} .sr-ft-spread-input:focus{border-color:#60a5fa;background:rgba(255,255,255,.15);}
+      #${ORDER_CONTROL_ID} .sr-ft-spread-hint{
+        grid-column:1 / -1;
+        color:#94a3b8;
+        font:700 10.5px/1.25 Arial,sans-serif;
+        margin-top:-2px;
+      }    `;
   }
 
   function showMessage(text) {
@@ -298,6 +338,39 @@
 
   function saveOrderUsdt(value) {
     localStorage.setItem(ORDER_SIZE_STORAGE_KEY, String(normalizeOrderUsdt(value)));
+  }
+
+  function normalizeSpreadInput(value) {
+    const text = String(value || "").trim().replace(",", ".");
+    if (!text) return "";
+    const n = Number(text);
+    if (!Number.isFinite(n)) return "";
+    return String(Math.round(n * 1000) / 1000);
+  }
+
+  function getFastTradeSpreadMode() {
+    return localStorage.getItem(FAST_TRADE_SPREAD_MODE_STORAGE_KEY) === "custom" ? "custom" : "link";
+  }
+
+  function saveFastTradeSpreadMode(mode) {
+    localStorage.setItem(FAST_TRADE_SPREAD_MODE_STORAGE_KEY, mode === "custom" ? "custom" : "link");
+  }
+
+  function getFastTradeSpreadValue() {
+    return normalizeSpreadInput(localStorage.getItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY) || "");
+  }
+
+  function saveFastTradeSpreadValue(value) {
+    const normalized = normalizeSpreadInput(value);
+    if (normalized) localStorage.setItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY, normalized);
+    else localStorage.removeItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY);
+    return normalized;
+  }
+
+  function getFastTradeSignalSpread(urlSignalSpread) {
+    const customValue = Number(getFastTradeSpreadValue());
+    if (getFastTradeSpreadMode() === "custom" && Number.isFinite(customValue)) return customValue;
+    return Number.isFinite(urlSignalSpread) ? urlSignalSpread : 0;
   }
 
   function getLiveOrderUsdt() {
@@ -365,6 +438,16 @@
     root.querySelectorAll(".sr-order-option").forEach(btn => {
       btn.classList.toggle("is-active", Number(btn.dataset.value) === current);
     });
+
+    const customToggle = root.querySelector(".sr-ft-custom-toggle");
+    const spreadInput = root.querySelector(".sr-ft-spread-input");
+    const isCustom = getFastTradeSpreadMode() === "custom";
+    if (customToggle) customToggle.checked = isCustom;
+    if (spreadInput) {
+      spreadInput.value = getFastTradeSpreadValue();
+      spreadInput.disabled = !isCustom;
+    }
+
     const rect = root.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) applyOrderPosition(root, { left: rect.left, top: rect.top });
   }
@@ -454,6 +537,14 @@
             <div class="sr-order-options">
               ${ORDER_SIZE_OPTIONS.map(value => `<button type="button" class="sr-order-option" data-value="${value}">${value}</button>`).join("")}
             </div>
+            <div class="sr-ft-spread-settings">
+              <label class="sr-ft-toggle" title="Use custom Open Spread for FastTrade auto links">
+                <input type="checkbox" class="sr-ft-custom-toggle">
+                FT Open %
+              </label>
+              <input type="text" class="sr-ft-spread-input" inputmode="decimal" placeholder="0.374" title="Custom Open Spread for FastTrade">
+              <div class="sr-ft-spread-hint">off = spread from link</div>
+            </div>
           </div>
         </div>`;
       document.body.appendChild(root);
@@ -465,6 +556,25 @@
           root.classList.remove("sr-order-open");
         });
       });
+
+      const customToggle = root.querySelector(".sr-ft-custom-toggle");
+      const spreadInput = root.querySelector(".sr-ft-spread-input");
+      customToggle?.addEventListener("change", event => {
+        event.stopPropagation();
+        saveFastTradeSpreadMode(customToggle.checked ? "custom" : "link");
+        updateOrderControl(root);
+      });
+      spreadInput?.addEventListener("change", event => {
+        event.stopPropagation();
+        const saved = saveFastTradeSpreadValue(spreadInput.value);
+        spreadInput.value = saved;
+        if (saved) saveFastTradeSpreadMode("custom");
+        updateOrderControl(root);
+      });
+      spreadInput?.addEventListener("keydown", event => {
+        if (event.key === "Enter") spreadInput.blur();
+      });
+
       installOrderDrag(root, root.querySelector(".sr-order-main"));
     }
     applyOrderPosition(root, getStoredOrderPosition());
@@ -535,7 +645,8 @@
     const side = String(params.get("side") || "LONG").trim().toUpperCase() === "SHORT" ? "SHORT" : "LONG";
     const exch1Name = normalizeAutoExchange(params.get("ex1") || params.get("exchange1") || params.get("long"));
     const exch2Name = normalizeAutoExchange(params.get("ex2") || params.get("exchange2") || params.get("short"));
-    const signalSpread = Number(String(params.get("signalSpread") || params.get("spread") || params.get("os") || "0").replace(",", "."));
+    const urlSignalSpread = Number(String(params.get("signalSpread") || params.get("spread") || params.get("os") || "0").replace(",", "."));
+    const signalSpread = getFastTradeSignalSpread(urlSignalSpread);
 
     if (!coin || !exch1Name || !exch2Name) {
       clearFastTradeUrl();
