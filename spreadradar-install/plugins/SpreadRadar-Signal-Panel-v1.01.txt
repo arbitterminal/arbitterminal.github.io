@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         ArbitTerminal: SpreadRadar Signal Panel Layout
 // @namespace    https://www.arbitterminal.online/
-// @version      1.01-compatible-close
+// @version      1.06-wallet-over-signals
 // @description  Окремий модуль стилізації signal panel, utility-page логіки і хрестика закриття signal-card, сумісний зі SpreadRadar Links
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
 // @grant        none
 // @connect      arbitterminal.github.io
-// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel-v1.01.txt
-// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel-v1.01.txt
+// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel.txt
+// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Signal-Panel.txt
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -20,6 +20,7 @@
   const SIGNAL_LIST_SELECTOR = ".signals-list";
   const DESKTOP_MIN_WIDTH = 1200;
   const SYNC_INTERVAL_MS = 700;
+  const SCROLLBAR_WIDTH_VAR = "--spreadradar-v-scrollbar-width";
 
   let lastPath = location.pathname;
   let lastSearch = location.search;
@@ -57,13 +58,13 @@
         position:fixed!important;
         right:6px!important;
         top:49px!important;
-        bottom:8px!important;
+        bottom:22px!important;
         width:450px!important;
         max-height:none!important;
         overflow-y:auto!important;
         overflow-x:hidden!important;
         background:transparent!important;
-        z-index:100001!important;
+        z-index:100000!important;
         padding:6px 8px 12px 6px!important;
         box-sizing:border-box!important;
         display:block!important;
@@ -221,6 +222,44 @@
         display:none!important;
       }
 
+      body.${BODY_CLASS} .wallet-bar.wb-desktop,
+      body.signals-reserved .wallet-bar.wb-desktop{
+        position:fixed!important;
+        left:0!important;
+        right:auto!important;
+        bottom:0!important;
+        width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
+        min-width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
+        max-width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
+        margin:0!important;
+        box-sizing:border-box!important;
+        transform:none!important;
+        z-index:100004!important;
+      }
+      body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-chips,
+      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-chips{
+        flex:1 1 auto!important;
+        min-width:0!important;
+        max-width:none!important;
+      }
+      body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-total,
+      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-total{
+        flex:0 0 auto!important;
+      }
+
+      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop,
+      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
+      body.signals-reserved .wb-desktop-popup.wb-desktop,
+      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
+        position:fixed!important;
+        z-index:100005!important;
+        transform:none!important;
+      }
+      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
+      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
+        pointer-events:auto!important;
+      }
+
       @media(max-width:1200px){
         body.${BODY_CLASS} .signals-list{
           position:static!important;
@@ -235,6 +274,13 @@
         }
       }
     `;
+  }
+
+  function updateScrollbarWidthVar() {
+    try {
+      const width = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+      document.documentElement.style.setProperty(SCROLLBAR_WIDTH_VAR, `${width || 17}px`);
+    } catch (_) {}
   }
 
   function isUtilityPage() {
@@ -297,6 +343,7 @@
   }
 
   function syncSignalPanel() {
+    updateScrollbarWidthVar();
     const enabled = !isUtilityPage() && window.innerWidth > DESKTOP_MIN_WIDTH && hasSignalList();
     setPanelEnabled(enabled);
 
@@ -347,6 +394,7 @@
   }
 
   function init() {
+    updateScrollbarWidthVar();
     injectStyle();
     watchDom();
     watchSpaNavigation();
