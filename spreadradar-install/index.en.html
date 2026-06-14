@@ -4,463 +4,340 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Step-by-step guide to registering in SpreadRadar</title>
-  <meta name="description" content="Guide: how to register in SpreadRadar and install the script for ArbitTerminal.">
+  <meta name="description" content="Step-by-step guide to registering in SpreadRadar and installing the SpreadRadar Links script for ArbitTerminal.">
+  <meta property="og:title" content="Step-by-step guide to registering in SpreadRadar">
+  <meta property="og:description" content="How to register in SpreadRadar and install the script for ArbitTerminal.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://arbitterminal.github.io/spreadradar-install/index.en.html">
+  <meta property="og:image" content="https://arbitterminal.github.io/spreadradar-install/img/1_Register_ru.png">
   <style>
     :root {
-      --bg: #f6f8fa;
-      --page: #ffffff;
-      --text: #24292f;
-      --muted: #57606a;
-      --border: #d0d7de;
-      --soft: #f6f8fa;
-      --code: #eff3f6;
-      --link: #0969da;
-      --green: #1a7f37;
-      --warning: #9a6700;
-      --shadow: 0 12px 36px rgba(27, 31, 36, .08);
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #18202f;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --accent: #16a34a;
+      --accent-soft: #ecfdf5;
+      --code: #0f172a;
     }
-
     * { box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
     body {
       margin: 0;
-      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.6;
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-      font-size: 16px;
-      line-height: 1.65;
+      background: radial-gradient(circle at top, #ffffff 0, var(--bg) 40%, #eef2f7 100%);
     }
-
-    main {
-      width: min(920px, calc(100% - 32px));
-      margin: 32px auto;
-      padding: 40px 48px 48px;
-      background: var(--page);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 32px 16px 56px;
     }
-
-    h1, h2 {
-      line-height: 1.25;
-      letter-spacing: -.015em;
+    article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 34px;
+      box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
     }
-
     h1 {
-      margin: 0 0 18px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid var(--border);
-      font-size: clamp(30px, 5vw, 44px);
-      font-weight: 750;
+      margin: 0 0 16px;
+      font-size: clamp(30px, 5vw, 46px);
+      line-height: 1.12;
+      letter-spacing: -0.04em;
     }
-
     h2 {
-      margin: 34px 0 14px;
-      font-size: clamp(22px, 3.2vw, 29px);
-      font-weight: 700;
+      margin: 42px 0 14px;
+      font-size: clamp(23px, 3vw, 30px);
+      line-height: 1.25;
+      letter-spacing: -0.02em;
     }
-
-    p { margin: 0 0 14px; }
-
+    p { margin: 12px 0; }
     a {
-      color: var(--link);
+      color: #2563eb;
       text-decoration: none;
-      font-weight: 600;
       overflow-wrap: anywhere;
     }
-
     a:hover { text-decoration: underline; }
-
-    hr {
-      height: 1px;
-      margin: 32px 0;
-      border: 0;
-      background: var(--border);
-    }
-
-    ol, ul { padding-left: 26px; }
-
-    li { margin: 6px 0; }
-
-    code {
-      padding: .18em .42em;
-      background: var(--code);
-      border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: .95em;
-    }
-
     .lead {
       color: var(--muted);
       font-size: 18px;
+      margin-bottom: 24px;
     }
-
-    .intro-list {
-      margin: 18px 0 22px;
-      padding-left: 0;
-      list-style: none;
-      font-size: 17px;
+    .todo {
+      padding: 18px 20px;
+      border-radius: 16px;
+      background: var(--accent-soft);
+      border: 1px solid #bbf7d0;
+      margin: 22px 0 30px;
     }
-
-    .intro-list li {
-      margin: 9px 0;
-      font-weight: 600;
+    .todo p { margin: 8px 0; }
+    hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 34px 0;
     }
-
-    .site-link {
-      display: inline-flex;
-      margin: 2px 0 16px;
-      padding: 10px 14px;
-      background: var(--soft);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-
-    .code-block {
-      display: block;
-      margin: 8px 0 16px;
-      padding: 12px 14px;
-      overflow-x: auto;
-      background: var(--soft);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
+    .kbd, code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      padding: 2px 7px;
+      color: var(--code);
+      font-size: 0.94em;
     }
-
-    .ok {
-      color: var(--green);
+    .check {
       font-weight: 700;
+      color: var(--accent);
     }
-
-    .warn {
-      color: var(--warning);
-      font-weight: 700;
-    }
-
     figure {
-      margin: 18px 0 4px;
-      padding: 12px;
-      background: var(--soft);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      margin: 22px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #f8fafc;
     }
-
     figure img {
       display: block;
       width: 100%;
       height: auto;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #fff;
     }
-
     figcaption {
-      margin-top: 9px;
+      padding: 10px 14px;
       color: var(--muted);
       font-size: 14px;
-      text-align: center;
+      border-top: 1px solid var(--line);
+      background: #ffffff;
     }
-
-    .footer-note {
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 14px;
-      text-align: center;
+    ol, ul { padding-left: 24px; }
+    li { margin: 8px 0; }
+    .warning {
+      padding: 18px 20px;
+      border-radius: 16px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
     }
-
-    @media (max-width: 680px) {
-      main {
-        width: min(100% - 18px, 920px);
-        margin: 9px auto;
-        padding: 24px 18px 34px;
-        border-radius: 10px;
-      }
-
-      h1 { font-size: 29px; }
-      h2 { font-size: 22px; }
-      figure { padding: 8px; }
+    @media (max-width: 640px) {
+      .page { padding: 14px 10px 36px; }
+      article { padding: 22px 16px; border-radius: 16px; }
+      h2 { margin-top: 32px; }
     }
   </style>
 </head>
 <body>
-<main>
-  <h1>Step-by-step guide to registering in SpreadRadar</h1>
-
-  <p class="lead">Guide: how to register in SpreadRadar and install the script for ArbitTerminal.</p>
-
-  <p>To use SpreadRadar together with ArbitTerminal, you need to:</p>
-
-  <ul class="intro-list">
-    <li>1️⃣ Log in to SpreadRadar via Telegram</li>
-    <li>2️⃣ Install the OrangeMonkey extension in Chrome</li>
-    <li>3️⃣ Install the SpreadRadar Links script</li>
-    <li>4️⃣ Check that the script works in ArbitTerminal</li>
-  </ul>
-
-  <hr>
-
-  <h2>STEP 1. Log in to SpreadRadar</h2>
-
-  <p>Open the website:</p>
-  <p><a class="site-link" href="https://spreadradar.net" target="_blank" rel="noopener">spreadradar.net</a></p>
-
-  <p>Click the button:</p>
-  <p><span class="ok">✅ Log in with Telegram</span></p>
-
-  <p>In the Telegram window, enter the phone number registered to your Telegram account and click:</p>
-  <p><span class="ok">✅ Next</span></p>
-
-  <figure>
-    <img src="img/1_Register.png" alt="Logging in to SpreadRadar via Telegram">
-    <figcaption>Screenshot 1</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 2. Confirm the login in Telegram</h2>
-
-  <p>You will receive a service message in Telegram asking you to confirm the login to <strong>spreadradar.net</strong>.</p>
-
-  <p>Click:</p>
-  <p><span class="ok">✅ Confirm</span></p>
-
-  <p>If you did not make this request, click <strong>Decline</strong>.</p>
-
-  <figure>
-    <img src="img/2_Telegram_confirmation.jpg" alt="Telegram login confirmation">
-    <figcaption>Screenshot 2</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 3. Copy the script link</h2>
-
-  <p>After logging in to SpreadRadar, find the script download button at the top of the page:</p>
-
-  <p><code>SpreadRadar-Links.txt</code></p>
-
-  <p>Right-click it and select:</p>
-  <p><span class="ok">✅ Copy link address</span></p>
-  <p>or</p>
-  <p><span class="ok">✅ Copy link</span></p>
-
-  <p>The link looks like this:</p>
-  <p><a class="site-link" href="https://spreadradar.net/assets/SpreadRadar-Links.txt" target="_blank" rel="noopener">https://spreadradar.net/assets/SpreadRadar-Links.txt</a></p>
-
-  <figure>
-    <img src="img/3_Copy_scripts_link.png" alt="Copying the SpreadRadar Links script link">
-    <figcaption>Screenshot 3</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 4. Go to the Chrome Web Store</h2>
-
-  <p>In Chrome, open the menu in the top-right corner:</p>
-  <p><code>⋮</code></p>
-
-  <p>Then go to:</p>
-  <p><code>Extensions → Visit Chrome Web Store</code></p>
-
-  <figure>
-    <img src="img/4_Install_Orange_monkey.png" alt="Opening Chrome Web Store from the Chrome menu">
-    <figcaption>Screenshot 4</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 5. Find OrangeMonkey</h2>
-
-  <p>In Chrome Web Store search, enter:</p>
-  <p><code>OrangeMonkey</code></p>
-
-  <p>Select the OrangeMonkey extension.</p>
-
-  <figure>
-    <img src="img/5_Install_Orange_monkey2.png" alt="Searching for OrangeMonkey in Chrome Web Store">
-    <figcaption>Screenshot 5</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 6. Install OrangeMonkey</h2>
-
-  <p>On the OrangeMonkey page, click:</p>
-  <p><span class="ok">✅ Add to Chrome</span></p>
-
-  <figure>
-    <img src="img/6_Install_Orange_monkey3.png" alt="Add to Chrome button for OrangeMonkey">
-    <figcaption>Screenshot 6</figcaption>
-  </figure>
-
-  <p>After that, confirm the installation:</p>
-  <p><span class="ok">✅ Add extension</span></p>
-
-  <figure>
-    <img src="img/7_Install_Orange_monkey4.png" alt="Confirming OrangeMonkey installation">
-    <figcaption>Screenshot 7</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 7. Enable User Scripts</h2>
-
-  <p>After installing OrangeMonkey, open the extension settings page.</p>
-
-  <p>Enable:</p>
-  <p><span class="ok">✅ Developer mode</span></p>
-  <p><span class="ok">✅ Allow User Scripts</span></p>
-
-  <p>This is required so Chrome allows userscripts to run.</p>
-
-  <figure>
-    <img src="img/8_Dev_mode_user_scripts.png" alt="Enabling Developer mode and Allow User Scripts">
-    <figcaption>Screenshot 8</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 8. Open OrangeMonkey</h2>
-
-  <p>Click the OrangeMonkey icon in the browser toolbar.</p>
-
-  <p>Then click the settings icon:</p>
-  <p><code>⚙️</code></p>
-
-  <figure>
-    <img src="img/9_Install_user_scripts.png" alt="Opening OrangeMonkey settings">
-    <figcaption>Screenshot 9</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 9. Go to My scripts</h2>
-
-  <p>In the OrangeMonkey menu, open the section:</p>
-  <p><code>My scripts</code></p>
-
-  <p>Then click the button:</p>
-  <p><span class="ok">✅ Install from URL</span></p>
-
-  <figure>
-    <img src="img/10_Install_user_scripts2.png" alt="My scripts section and Install from URL button">
-    <figcaption>Screenshot 10</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 10. Paste the script link</h2>
-
-  <p>In the <strong>Input URL</strong> field, paste the link:</p>
-  <p><a class="site-link" href="https://spreadradar.net/assets/SpreadRadar-Links.txt" target="_blank" rel="noopener">https://spreadradar.net/assets/SpreadRadar-Links.txt</a></p>
-
-  <p>Click:</p>
-  <p><span class="ok">✅ OK</span></p>
-
-  <figure>
-    <img src="img/11_Install_user_scripts3.png" alt="Pasting the script link in OrangeMonkey">
-    <figcaption>Screenshot 11</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 11. Confirm the script installation</h2>
-
-  <p>The script installation page will open.</p>
-
-  <p>Click:</p>
-  <p><span class="ok">✅ Confirm installation</span></p>
-
-  <figure>
-    <img src="img/12_Install_user_scripts4.png" alt="Confirming script installation in OrangeMonkey">
-    <figcaption>Screenshot 12</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 12. Check that the script is installed</h2>
-
-  <p>The following script should appear in the <strong>My scripts</strong> list:</p>
-
-  <p><strong>ArbitTerminal: SpreadRadar Links</strong></p>
-
-  <p>Version:</p>
-  <p><code>v1.39.1-asterdex</code></p>
-
-  <figure>
-    <img src="img/13_Installed_user_script.png" alt="Installed ArbitTerminal SpreadRadar Links script">
-    <figcaption>Screenshot 13</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>STEP 13. Check the setup in ArbitTerminal</h2>
-
-  <p>Open ArbitTerminal:</p>
-  <p><a class="site-link" href="https://www.arbitterminal.online" target="_blank" rel="noopener">arbitterminal.online</a></p>
-
-  <p>Click the OrangeMonkey icon.</p>
-
-  <p>The following should be enabled:</p>
-  <p><span class="ok">✅ All scripts enabled</span></p>
-  <p><span class="ok">✅ ArbitTerminal: SpreadRadar Links</span></p>
-
-  <p>After that, a green <strong>Order Size</strong> button should appear in ArbitTerminal, for example:</p>
-  <p><code>300$</code></p>
-
-  <p>Available options:</p>
-  <p><code>100$ / 200$ / 300$ / 400$ / 500$</code></p>
-
-  <p>If nothing has changed, refresh the page:</p>
-  <p><code>Ctrl + F5</code></p>
-
-  <figure>
-    <img src="img/14_Finish.png" alt="Checking that the script works in ArbitTerminal">
-    <figcaption>Screenshot 14</figcaption>
-  </figure>
-
-  <hr>
-
-  <h2>How to check that everything works</h2>
-
-  <p>Hover your mouse over a ticker in an ArbitTerminal signal card.</p>
-
-  <p>A SpreadRadar tooltip with live data should appear:</p>
-
-  <p><span class="ok">✅ OPEN</span></p>
-  <p><span class="ok">✅ DEPTH: OK</span></p>
-  <p><span class="ok">✅ mini spread chart</span></p>
-
-  <p>If the tooltip appears, the script has been installed correctly.</p>
-
-  <hr>
-
-  <h2><span class="warn">⚠️</span> If something does not work</h2>
-
-  <p>Check the following:</p>
-
-  <ol>
-    <li>Are you logged in to SpreadRadar via Telegram?</li>
-    <li>Is OrangeMonkey installed?</li>
-    <li>Is Developer mode enabled?</li>
-    <li>Is Allow User Scripts enabled?</li>
-    <li>Is the <strong>ArbitTerminal: SpreadRadar Links</strong> script installed?</li>
-    <li>Is exactly <strong>arbitterminal.online</strong> open?</li>
-    <li>Did you refresh the ArbitTerminal page with <strong>F5</strong>?</li>
-  </ol>
-
-  <p>If the tooltip says that login or access is required, open <a href="https://spreadradar.net" target="_blank" rel="noopener">spreadradar.net</a>, log in via Telegram, and check that your access is active.</p>
-
-  <p class="footer-note">SpreadRadar for ArbitTerminal • Installation guide</p>
-</main>
+  <main class="page">
+    <article>
+      <h1>Step-by-step guide to registering in SpreadRadar</h1>
+      <p class="lead">Guide: how to register in SpreadRadar and install the script for ArbitTerminal.</p>
+
+      <p>To use SpreadRadar together with ArbitTerminal, you need to:</p>
+      <div class="todo">
+        <p>1️⃣ Log in to SpreadRadar via Telegram</p>
+        <p>2️⃣ Install the OrangeMonkey extension in Chrome</p>
+        <p>3️⃣ Install the SpreadRadar Links script</p>
+        <p>4️⃣ Check that the script works in ArbitTerminal</p>
+      </div>
+
+      <hr>
+
+      <h2>STEP 1. Log in to SpreadRadar</h2>
+      <p>Open the website:</p>
+      <p><a href="https://spreadradar.net" target="_blank" rel="noopener">spreadradar.net</a></p>
+      <p>Click the button:</p>
+      <p class="check">✅ Log in via Telegram</p>
+      <p>In the Telegram window, enter the phone number linked to your Telegram account and click:</p>
+      <p class="check">✅ Next</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/1_Register_ru.png" alt="Logging in to SpreadRadar via Telegram">
+        <figcaption>Screenshot 1</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 2. Confirm the Telegram login</h2>
+      <p>You will receive a service message in Telegram asking you to confirm the login to <strong>spreadradar.net</strong>.</p>
+      <p>Click:</p>
+      <p class="check">✅ Confirm</p>
+      <p>If you did not make this request, click “Decline”.</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/2_Telegram_confirmation_ru.jpg" alt="Telegram login confirmation">
+        <figcaption>Screenshot 2</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 3. Copy the script link</h2>
+      <p>After logging in to SpreadRadar, find the script download button at the top of the page:</p>
+      <p><code>SpreadRadar-Links.txt</code></p>
+      <p>Right-click it and select:</p>
+      <p class="check">✅ Copy link address</p>
+      <p>or</p>
+      <p class="check">✅ Copy link</p>
+      <p>The link looks like this:</p>
+      <p><a href="https://spreadradar.net/assets/SpreadRadar-Links.txt" target="_blank" rel="noopener">https://spreadradar.net/assets/SpreadRadar-Links.txt</a></p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/3_Copy_scripts_link.png" alt="Copying the SpreadRadar Links script URL">
+        <figcaption>Screenshot 3</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 4. Go to the Chrome Web Store</h2>
+      <p>In Chrome, open the menu in the top-right corner:</p>
+      <p><code>⋮</code></p>
+      <p>Then go to:</p>
+      <p><code>Extensions → Visit Chrome Web Store</code></p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/4_Install_Orange_monkey.png" alt="Opening the Chrome Web Store">
+        <figcaption>Screenshot 4</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 5. Find OrangeMonkey</h2>
+      <p>In Chrome Web Store search, type:</p>
+      <p><code>OrangeMonkey</code></p>
+      <p>Select the <strong>OrangeMonkey</strong> extension.</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/5_Install_Orange_monkey2.png" alt="Searching for OrangeMonkey in Chrome Web Store">
+        <figcaption>Screenshot 5</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 6. Install OrangeMonkey</h2>
+      <p>On the OrangeMonkey page, click:</p>
+      <p class="check">✅ Add to Chrome</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/6_Install_Orange_monkey3.png" alt="Add to Chrome button for OrangeMonkey">
+        <figcaption>Screenshot 6</figcaption>
+      </figure>
+      <p>Then confirm the installation:</p>
+      <p class="check">✅ Add extension</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/7_Install_Orange_monkey4.png" alt="Confirming the OrangeMonkey installation">
+        <figcaption>Screenshot 7</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 7. Enable User Scripts</h2>
+      <p>After installing OrangeMonkey, open the extension settings page.</p>
+      <p>Enable:</p>
+      <p class="check">✅ Developer mode</p>
+      <p class="check">✅ Allow User Scripts</p>
+      <p>This is required so Chrome can run user scripts.</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/8_Dev_mode_user_scripts.png" alt="Enabling Developer mode and Allow User Scripts">
+        <figcaption>Screenshot 8</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 8. Open OrangeMonkey</h2>
+      <p>Click the OrangeMonkey icon on the browser toolbar.</p>
+      <p>Then click the settings icon:</p>
+      <p><code>⚙️</code></p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/9_Install_user_scripts.png" alt="Opening OrangeMonkey settings">
+        <figcaption>Screenshot 9</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 9. Go to My scripts</h2>
+      <p>In the OrangeMonkey menu, open:</p>
+      <p><code>My scripts</code></p>
+      <p>Then click:</p>
+      <p class="check">✅ Install from URL</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/10_Install_user_scripts2.png" alt="My scripts section and Install from URL button">
+        <figcaption>Screenshot 10</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 10. Paste the script link</h2>
+      <p>In the <strong>Input URL</strong> field, paste this link:</p>
+      <p><a href="https://spreadradar.net/assets/SpreadRadar-Links.txt" target="_blank" rel="noopener">https://spreadradar.net/assets/SpreadRadar-Links.txt</a></p>
+      <p>Click:</p>
+      <p class="check">✅ OK</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/11_Install_user_scripts3.png" alt="Pasting the script link into OrangeMonkey">
+        <figcaption>Screenshot 11</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 11. Confirm the script installation</h2>
+      <p>The script installation page will open.</p>
+      <p>Click:</p>
+      <p class="check">✅ Confirm installation</p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/12_Install_user_scripts4.png" alt="Confirming the script installation in OrangeMonkey">
+        <figcaption>Screenshot 12</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 12. Check that the script is installed</h2>
+      <p>The script should appear in the <strong>My scripts</strong> list:</p>
+      <p><strong>ArbitTerminal: SpreadRadar Links</strong></p>
+      <p>Version:</p>
+      <p><code>v1.39.1-asterdex</code></p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/13_Installed_user_script.png" alt="Installed ArbitTerminal SpreadRadar Links script">
+        <figcaption>Screenshot 13</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>STEP 13. Check how it works in ArbitTerminal</h2>
+      <p>Open ArbitTerminal:</p>
+      <p><a href="https://www.arbitterminal.online" target="_blank" rel="noopener">arbitterminal.online</a></p>
+      <p>Click the OrangeMonkey icon.</p>
+      <p>The following should be enabled:</p>
+      <p class="check">✅ All scripts enabled</p>
+      <p class="check">✅ ArbitTerminal: SpreadRadar Links</p>
+      <p>After that, a green <strong>Order Size</strong> button should appear in ArbitTerminal, for example:</p>
+      <p><strong>300$</strong></p>
+      <p>Available options:</p>
+      <p><strong>100$ / 200$ / 300$ / 400$ / 500$</strong></p>
+      <p>If nothing changed, refresh the page:</p>
+      <p><span class="kbd">Ctrl + F5</span></p>
+      <figure>
+        <img src="https://arbitterminal.github.io/spreadradar-install/img/14_Finish.png" alt="Checking that the script works in ArbitTerminal">
+        <figcaption>Screenshot 14</figcaption>
+      </figure>
+
+      <hr>
+
+      <h2>How to check that everything works?</h2>
+      <p>Hover your mouse over a ticker in an ArbitTerminal signal card.</p>
+      <p>A SpreadRadar tooltip with live data should appear:</p>
+      <p class="check">✅ OPEN</p>
+      <p class="check">✅ DEPTH: OK</p>
+      <p class="check">✅ mini spread chart</p>
+      <p>If the tooltip appears, the script is installed correctly.</p>
+
+      <hr>
+
+      <h2>⚠️ If something does not work</h2>
+      <div class="warning">
+        <p>Check:</p>
+        <ol>
+          <li>Whether you logged in to SpreadRadar via Telegram</li>
+          <li>Whether OrangeMonkey is installed</li>
+          <li>Whether <strong>Developer mode</strong> is enabled</li>
+          <li>Whether <strong>Allow User Scripts</strong> is enabled</li>
+          <li>Whether the <strong>ArbitTerminal: SpreadRadar Links</strong> script is installed</li>
+          <li>Whether you opened exactly <strong>arbitterminal.online</strong></li>
+          <li>Whether you refreshed the ArbitTerminal page with <strong>F5</strong></li>
+        </ol>
+        <p>If the tooltip says that login or access is required, open <strong>spreadradar.net</strong>, log in via Telegram, and check that your access is active.</p>
+      </div>
+    </article>
+  </main>
 </body>
 </html>
