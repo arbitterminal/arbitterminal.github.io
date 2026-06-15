@@ -7,6 +7,9 @@
 // @match        https://arbitterminal.online/*
 // @match        https://signalostest.arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
+// @connect      arbitterminal.github.io
+// @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/AT-Plugins-SpreadRadar-edition.txt
+// @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/AT-Plugins-SpreadRadar-edition.txt
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
