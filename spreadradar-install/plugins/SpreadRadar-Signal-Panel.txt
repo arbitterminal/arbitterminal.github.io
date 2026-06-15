@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Signal Panel Right Layout for AT
 // @namespace    https://www.arbitterminal.online/
-// @version      1.07-virtuoso-fix
+// @version      1.08-virtuoso-safe
 // @description  Окремий модуль стилізації signal panel, utility-page логіки і хрестика закриття signal-card, сумісний зі SpreadRadar Links
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
@@ -17,25 +17,30 @@
 
   if (!/(^|\.)arbitterminal\.online$/i.test(location.hostname)) return;
 
-  const STYLE_ID = "spreadradar-signal-panel-style-v107";
-  const PANEL_ROOT_CLASS = "spreadradar-signal-panel-root";
-  const PANEL_ON_CLASS = "spreadradar-signals-panel-on";
-  const SIGNALS_RESERVED_CLASS = "spreadradar-signals-reserved";
-  const CLOSE_CLASS = "spreadradar-signal-close";
-  const HIDDEN_CLASS = "spreadradar-signal-item-hidden";
+  const VERSION = "1.08-virtuoso-safe";
+  const STYLE_ID = "spreadradar-signal-panel-style-v108";
+  const PANEL_ROOT_CLASS = "spreadradar-signal-panel-root-v108";
+  const PANEL_ON_CLASS = "spreadradar-signals-panel-on-v108";
+  const CLOSE_CLASS = "spreadradar-signal-close-v108";
+  const HIDDEN_CLASS = "spreadradar-signal-item-hidden-v108";
 
-  function $(selector, root = document) {
-    return root.querySelector(selector);
-  }
+  let syncTimer = 0;
+  let lastRoot = null;
 
-  function $$(selector, root = document) {
-    return Array.from(root.querySelectorAll(selector));
-  }
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   function isUtilityPage() {
     const path = location.pathname.toLowerCase();
     return /history|trend|chart|leaderboard|cooperation|settings|login/.test(path)
       || Boolean(document.querySelector(".chart-fullscreen-btn:fullscreen"));
+  }
+
+  function isVisible(el) {
+    if (!(el instanceof Element) || !el.isConnected) return false;
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
   }
 
   function findSignalsList() {
@@ -45,10 +50,9 @@
   function findPanelRoot(list) {
     if (!list) return null;
 
-    // New ArbitTerminal signal block is rendered by React Virtuoso:
-    // [data-virtuoso-scroller="true"] > div > .signals-list > .virtuoso-grid-item > .signal-card
-    // The old script fixed .signals-list itself. That breaks Virtuoso and may leave only one card visible.
-    // We must fix the Virtuoso scroller/wrapper instead and keep .signals-list in normal document flow.
+    // New AT layout: React Virtuoso.
+    // Important: do NOT position/flex/transform .signals-list itself.
+    // Use the Virtuoso scroller as the panel root and leave list/items in React's expected flow.
     return list.closest('[data-virtuoso-scroller="true"]')
       || list.closest('[data-testid="virtuoso-scroller"]')
       || list.parentElement;
@@ -70,8 +74,8 @@
         top:49px!important;
         bottom:22px!important;
         width:450px!important;
-        height:auto!important;
-        max-height:none!important;
+        height:calc(100vh - 71px)!important;
+        max-height:calc(100vh - 71px)!important;
         min-height:0!important;
         overflow-y:auto!important;
         overflow-x:hidden!important;
@@ -80,59 +84,15 @@
         box-sizing:border-box!important;
         padding:0!important;
         margin:0!important;
-        transform:none!important;
-        contain:none!important;
-      }
-
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} > div{
-        width:100%!important;
-        min-width:0!important;
-        max-width:none!important;
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-        position:relative!important;
-        top:auto!important;
-        left:auto!important;
-        right:auto!important;
-        bottom:auto!important;
-        transform:none!important;
-        box-sizing:border-box!important;
       }
 
       body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signals-list{
-        position:relative!important;
-        display:block!important;
         width:100%!important;
         min-width:0!important;
         max-width:none!important;
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-        overflow:visible!important;
-        background:transparent!important;
         box-sizing:border-box!important;
         padding-left:6px!important;
         padding-right:8px!important;
-        padding-top:6px!important;
-        margin:0!important;
-        transform:none!important;
-      }
-
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .virtuoso-grid-item{
-        display:block!important;
-        width:100%!important;
-        min-width:0!important;
-        max-width:none!important;
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-        overflow:visible!important;
-        box-sizing:border-box!important;
-        margin:0!important;
-        padding:0!important;
-        position:relative!important;
-        transform:none!important;
       }
 
       body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .virtuoso-grid-item.${HIDDEN_CLASS}{
@@ -140,35 +100,14 @@
       }
 
       body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card{
-        display:block!important;
         width:100%!important;
         max-width:none!important;
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-        flex:0 0 auto!important;
-        align-self:flex-start!important;
+        box-sizing:border-box!important;
         margin:0 0 8px 0!important;
         padding:8px 10px 10px!important;
         border-radius:6px!important;
-        cursor:pointer!important;
         position:relative!important;
-        box-sizing:border-box!important;
         overflow:visible!important;
-        transform:none!important;
-      }
-
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card *{
-        box-sizing:border-box!important;
-      }
-
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .header,
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .exchange-info,
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer,
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card table{
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
       }
 
       body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card table{
@@ -247,15 +186,6 @@
         cursor:pointer!important;
       }
 
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer button:hover{
-        background:linear-gradient(#f8fafc,#e8eef6)!important;
-        border-color:#7d8da3!important;
-      }
-
-      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer button:active{
-        transform:translateY(1px)!important;
-      }
-
       body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer .signal-time{
         display:block!important;
         min-width:0!important;
@@ -268,29 +198,13 @@
         text-align:left!important;
       }
 
-      body.${SIGNALS_RESERVED_CLASS} main,
-      body.${SIGNALS_RESERVED_CLASS} .page-content,
-      body.${SIGNALS_RESERVED_CLASS} .content,
-      body.${SIGNALS_RESERVED_CLASS} .main-content,
-      body.${SIGNALS_RESERVED_CLASS} #root > div,
-      body.${SIGNALS_RESERVED_CLASS} .trade-cards-group,
-      body.${SIGNALS_RESERVED_CLASS} .filter-form,
-      body.${SIGNALS_RESERVED_CLASS} .trade-card,
-      body.${SIGNALS_RESERVED_CLASS} .trade-card-wrapper{
-        max-width:calc(100vw - 470px)!important;
-      }
-
       .${CLOSE_CLASS}{
         position:absolute!important;
         top:3px!important;
         right:5px!important;
         left:auto!important;
         width:20px!important;
-        min-width:20px!important;
-        max-width:20px!important;
         height:20px!important;
-        min-height:20px!important;
-        max-height:20px!important;
         padding:0!important;
         margin:0!important;
         box-sizing:border-box!important;
@@ -317,19 +231,8 @@
           position:static!important;
           width:auto!important;
           height:auto!important;
+          max-height:none!important;
           overflow:visible!important;
-        }
-
-        body.${SIGNALS_RESERVED_CLASS} main,
-        body.${SIGNALS_RESERVED_CLASS} .page-content,
-        body.${SIGNALS_RESERVED_CLASS} .content,
-        body.${SIGNALS_RESERVED_CLASS} .main-content,
-        body.${SIGNALS_RESERVED_CLASS} #root > div,
-        body.${SIGNALS_RESERVED_CLASS} .trade-cards-group,
-        body.${SIGNALS_RESERVED_CLASS} .filter-form,
-        body.${SIGNALS_RESERVED_CLASS} .trade-card,
-        body.${SIGNALS_RESERVED_CLASS} .trade-card-wrapper{
-          max-width:none!important;
         }
       }
     `;
@@ -343,12 +246,10 @@
   }
 
   function addCloseButton(card) {
-    if (!card || card.dataset.spreadradarClose === "true") return;
+    if (!card || card.dataset.spreadradarCloseV108 === "true") return;
 
-    card.dataset.spreadradarClose = "true";
-    if (getComputedStyle(card).position === "static") {
-      card.style.position = "relative";
-    }
+    card.dataset.spreadradarCloseV108 = "true";
+    if (getComputedStyle(card).position === "static") card.style.position = "relative";
 
     const close = document.createElement("button");
     close.type = "button";
@@ -372,6 +273,11 @@
     card.appendChild(close);
   }
 
+  function removeOldV107Classes() {
+    document.body.classList.remove("spreadradar-signals-panel-on", "spreadradar-signals-reserved");
+    $$(".spreadradar-signal-panel-root").forEach((root) => root.classList.remove("spreadradar-signal-panel-root"));
+  }
+
   function clearOldRoots(currentRoot) {
     $$(`.${PANEL_ROOT_CLASS}`).forEach((root) => {
       if (root !== currentRoot) root.classList.remove(PANEL_ROOT_CLASS);
@@ -380,35 +286,47 @@
 
   function syncSignalPanel() {
     injectStyle();
+    removeOldV107Classes();
 
     const shouldDisable = isUtilityPage();
     const list = shouldDisable ? null : findSignalsList();
     const root = list ? findPanelRoot(list) : null;
-    const enabled = Boolean(root && window.innerWidth > 1200);
+    const enabled = Boolean(root && isVisible(root) && window.innerWidth > 1200);
 
     clearOldRoots(root);
-
     document.body.classList.toggle(PANEL_ON_CLASS, enabled);
-    document.body.classList.toggle(SIGNALS_RESERVED_CLASS, enabled);
 
     if (!enabled) {
-      $$(`.${CLOSE_CLASS}`).forEach((button) => button.remove());
-      if (root) root.classList.remove(PANEL_ROOT_CLASS);
+      if (lastRoot) lastRoot.classList.remove(PANEL_ROOT_CLASS);
+      lastRoot = null;
       return;
     }
 
     root.classList.add(PANEL_ROOT_CLASS);
+    lastRoot = root;
     $$(".signal-card", list).forEach(addCloseButton);
+  }
+
+  function scheduleSync(delay = 80) {
+    if (syncTimer) return;
+    syncTimer = window.setTimeout(() => {
+      syncTimer = 0;
+      syncSignalPanel();
+    }, delay);
   }
 
   function start() {
     injectStyle();
     syncSignalPanel();
-    setInterval(syncSignalPanel, 1000);
-    window.addEventListener("resize", syncSignalPanel, { passive: true });
+    window.addEventListener("resize", () => scheduleSync(120), { passive: true });
+    window.addEventListener("hashchange", () => scheduleSync(120), { passive: true });
 
-    const observer = new MutationObserver(() => syncSignalPanel());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    const observer = new MutationObserver(() => scheduleSync(120));
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
+    // Fallback only, not an aggressive layout loop.
+    setInterval(() => scheduleSync(0), 2500);
+    console.log(`[Signal Panel Right Layout for AT] ${VERSION} loaded`);
   }
 
   if (document.readyState === "loading") {
