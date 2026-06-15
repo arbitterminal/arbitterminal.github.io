@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Signal Panel Right Layout for AT
 // @namespace    https://www.arbitterminal.online/
-// @version      1.06-wallet-over-signals
+// @version      1.07-virtuoso-fix
 // @description  Окремий модуль стилізації signal panel, utility-page логіки і хрестика закриття signal-card, сумісний зі SpreadRadar Links
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
@@ -15,17 +15,44 @@
 (function () {
   "use strict";
 
-  const STYLE_ID = "spreadradar-signal-panel-layout-style";
-  const BODY_CLASS = "spreadradar-signals-panel-on";
-  const SIGNAL_LIST_SELECTOR = ".signals-list";
-  const DESKTOP_MIN_WIDTH = 1200;
-  const SYNC_INTERVAL_MS = 700;
-  const SCROLLBAR_WIDTH_VAR = "--spreadradar-v-scrollbar-width";
+  if (!/(^|\.)arbitterminal\.online$/i.test(location.hostname)) return;
 
-  let lastPath = location.pathname;
-  let lastSearch = location.search;
-  let lastPanelState = null;
-  let observer = null;
+  const STYLE_ID = "spreadradar-signal-panel-style-v107";
+  const PANEL_ROOT_CLASS = "spreadradar-signal-panel-root";
+  const PANEL_ON_CLASS = "spreadradar-signals-panel-on";
+  const SIGNALS_RESERVED_CLASS = "spreadradar-signals-reserved";
+  const CLOSE_CLASS = "spreadradar-signal-close";
+  const HIDDEN_CLASS = "spreadradar-signal-item-hidden";
+
+  function $(selector, root = document) {
+    return root.querySelector(selector);
+  }
+
+  function $$(selector, root = document) {
+    return Array.from(root.querySelectorAll(selector));
+  }
+
+  function isUtilityPage() {
+    const path = location.pathname.toLowerCase();
+    return /history|trend|chart|leaderboard|cooperation|settings|login/.test(path)
+      || Boolean(document.querySelector(".chart-fullscreen-btn:fullscreen"));
+  }
+
+  function findSignalsList() {
+    return $(".signals-list[data-testid='virtuoso-item-list'], .signals-list");
+  }
+
+  function findPanelRoot(list) {
+    if (!list) return null;
+
+    // New ArbitTerminal signal block is rendered by React Virtuoso:
+    // [data-virtuoso-scroller="true"] > div > .signals-list > .virtuoso-grid-item > .signal-card
+    // The old script fixed .signals-list itself. That breaks Virtuoso and may leave only one card visible.
+    // We must fix the Virtuoso scroller/wrapper instead and keep .signals-list in normal document flow.
+    return list.closest('[data-virtuoso-scroller="true"]')
+      || list.closest('[data-testid="virtuoso-scroller"]')
+      || list.parentElement;
+  }
 
   function injectStyle() {
     let style = document.getElementById(STYLE_ID);
@@ -36,40 +63,84 @@
     }
 
     style.textContent = `
-      .signals-list .signal-card{
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-        flex:0 0 auto!important;
-        align-self:flex-start!important;
-        display:block!important;
-        overflow:visible!important;
-      }
-      .signals-list .signal-card .header,
-      .signals-list .signal-card .exchange-info,
-      .signals-list .signal-card .signal-footer,
-      .signals-list .signal-card table{
-        height:auto!important;
-        min-height:0!important;
-        max-height:none!important;
-      }
-
-      body.${BODY_CLASS} .signals-list{
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS}{
         position:fixed!important;
+        left:auto!important;
         right:6px!important;
         top:49px!important;
         bottom:22px!important;
         width:450px!important;
+        height:auto!important;
         max-height:none!important;
+        min-height:0!important;
         overflow-y:auto!important;
         overflow-x:hidden!important;
-        background:transparent!important;
         z-index:100000!important;
-        padding:6px 8px 12px 6px!important;
+        background:transparent!important;
         box-sizing:border-box!important;
-        display:block!important;
+        padding:0!important;
+        margin:0!important;
+        transform:none!important;
+        contain:none!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} > div{
+        width:100%!important;
+        min-width:0!important;
+        max-width:none!important;
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        position:relative!important;
+        top:auto!important;
+        left:auto!important;
+        right:auto!important;
+        bottom:auto!important;
+        transform:none!important;
+        box-sizing:border-box!important;
+      }
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signals-list{
+        position:relative!important;
+        display:block!important;
+        width:100%!important;
+        min-width:0!important;
+        max-width:none!important;
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        overflow:visible!important;
+        background:transparent!important;
+        box-sizing:border-box!important;
+        padding-left:6px!important;
+        padding-right:8px!important;
+        padding-top:6px!important;
+        margin:0!important;
+        transform:none!important;
+      }
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .virtuoso-grid-item{
+        display:block!important;
+        width:100%!important;
+        min-width:0!important;
+        max-width:none!important;
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        overflow:visible!important;
+        box-sizing:border-box!important;
+        margin:0!important;
+        padding:0!important;
+        position:relative!important;
+        transform:none!important;
+      }
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .virtuoso-grid-item.${HIDDEN_CLASS}{
+        display:none!important;
+      }
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card{
+        display:block!important;
         width:100%!important;
         max-width:none!important;
         height:auto!important;
@@ -80,54 +151,68 @@
         margin:0 0 8px 0!important;
         padding:8px 10px 10px!important;
         border-radius:6px!important;
+        cursor:pointer!important;
         position:relative!important;
         box-sizing:border-box!important;
         overflow:visible!important;
+        transform:none!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card *{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card *{
         box-sizing:border-box!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card table{
-        width:100%!important;
-        table-layout:fixed!important;
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .header,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .exchange-info,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card table{
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .exchange-info{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card table{
+        width:100%!important;
         table-layout:auto!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card td,
-      body.${BODY_CLASS} .signals-list .signal-card th{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card td,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card th{
         min-width:0!important;
         overflow:hidden!important;
         text-overflow:ellipsis!important;
         white-space:nowrap!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .header td:first-child,
-      body.${BODY_CLASS} .signals-list .signal-card td.symbol{
-        width:112px!important;
-        max-width:112px!important;
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .header td:first-child,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card td.symbol,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card [data-help="signal.symbol"]{
+        width:82px!important;
+        max-width:82px!important;
+        font-weight:800!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .header td:nth-child(2){
-        width:132px!important;
-      }
-      body.${BODY_CLASS} .signals-list .signal-card .header td:nth-child(3){
-        width:108px!important;
-        max-width:108px!important;
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .header-right,
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card [data-help="signal.spreadValue"]{
         text-align:right!important;
-        padding-right:30px!important;
+        padding-right:28px!important;
         overflow:visible!important;
         text-overflow:clip!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .exchange-info td:first-child{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .exchange-info td:first-child{
         width:118px!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .exchange-info td:nth-child(2),
-      body.${BODY_CLASS} .signals-list .signal-card .exchange-info td:nth-child(3){
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .exchange-info td:nth-child(2),
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .exchange-info td:nth-child(3){
         width:auto!important;
         overflow:visible!important;
         text-overflow:clip!important;
         white-space:nowrap!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .signal-footer{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer{
         display:grid!important;
         grid-template-columns:112px 112px minmax(92px,1fr)!important;
         align-items:center!important;
@@ -136,7 +221,8 @@
         height:auto!important;
         overflow:visible!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .signal-footer button{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer button{
         width:112px!important;
         min-width:112px!important;
         max-width:112px!important;
@@ -160,14 +246,17 @@
         box-shadow:0 1px 2px rgba(15,23,42,.12)!important;
         cursor:pointer!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .signal-footer button:hover{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer button:hover{
         background:linear-gradient(#f8fafc,#e8eef6)!important;
         border-color:#7d8da3!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .signal-footer button:active{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer button:active{
         transform:translateY(1px)!important;
       }
-      body.${BODY_CLASS} .signals-list .signal-card .signal-footer .signal-time{
+
+      body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS} .signal-card .signal-footer .signal-time{
         display:block!important;
         min-width:0!important;
         overflow:visible!important;
@@ -179,15 +268,19 @@
         text-align:left!important;
       }
 
-      body.${BODY_CLASS} main,
-      body.${BODY_CLASS} .page-content,
-      body.${BODY_CLASS} .content,
-      body.${BODY_CLASS} .main-content,
-      body.${BODY_CLASS} #root>div{
+      body.${SIGNALS_RESERVED_CLASS} main,
+      body.${SIGNALS_RESERVED_CLASS} .page-content,
+      body.${SIGNALS_RESERVED_CLASS} .content,
+      body.${SIGNALS_RESERVED_CLASS} .main-content,
+      body.${SIGNALS_RESERVED_CLASS} #root > div,
+      body.${SIGNALS_RESERVED_CLASS} .trade-cards-group,
+      body.${SIGNALS_RESERVED_CLASS} .filter-form,
+      body.${SIGNALS_RESERVED_CLASS} .trade-card,
+      body.${SIGNALS_RESERVED_CLASS} .trade-card-wrapper{
         max-width:calc(100vw - 470px)!important;
       }
 
-      .spreadradar-signal-close{
+      .${CLOSE_CLASS}{
         position:absolute!important;
         top:3px!important;
         right:5px!important;
@@ -213,200 +306,114 @@
         z-index:1000!important;
         opacity:.85!important;
         pointer-events:auto!important;
-        user-select:none!important;
       }
-      .spreadradar-signal-close:hover{
+
+      .${CLOSE_CLASS}:hover{
         opacity:1!important;
-      }
-      .signals-list .signal-card[data-spreadradar-hidden="true"]{
-        display:none!important;
-      }
-
-      body.${BODY_CLASS} .wallet-bar.wb-desktop,
-      body.signals-reserved .wallet-bar.wb-desktop{
-        position:fixed!important;
-        left:0!important;
-        right:auto!important;
-        bottom:0!important;
-        width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
-        min-width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
-        max-width:calc(100vw - var(${SCROLLBAR_WIDTH_VAR}, 17px))!important;
-        margin:0!important;
-        box-sizing:border-box!important;
-        transform:none!important;
-        z-index:100004!important;
-      }
-      body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-chips,
-      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-chips{
-        flex:1 1 auto!important;
-        min-width:0!important;
-        max-width:none!important;
-      }
-      body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-total,
-      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-total{
-        flex:0 0 auto!important;
-      }
-
-      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop,
-      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
-      body.signals-reserved .wb-desktop-popup.wb-desktop,
-      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
-        position:fixed!important;
-        z-index:100005!important;
-        transform:none!important;
-      }
-      body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
-      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
-        pointer-events:auto!important;
       }
 
       @media(max-width:1200px){
-        body.${BODY_CLASS} .signals-list{
+        body.${PANEL_ON_CLASS} .${PANEL_ROOT_CLASS}{
           position:static!important;
           width:auto!important;
+          height:auto!important;
+          overflow:visible!important;
         }
-        body.${BODY_CLASS} main,
-        body.${BODY_CLASS} .page-content,
-        body.${BODY_CLASS} .content,
-        body.${BODY_CLASS} .main-content,
-        body.${BODY_CLASS} #root>div{
+
+        body.${SIGNALS_RESERVED_CLASS} main,
+        body.${SIGNALS_RESERVED_CLASS} .page-content,
+        body.${SIGNALS_RESERVED_CLASS} .content,
+        body.${SIGNALS_RESERVED_CLASS} .main-content,
+        body.${SIGNALS_RESERVED_CLASS} #root > div,
+        body.${SIGNALS_RESERVED_CLASS} .trade-cards-group,
+        body.${SIGNALS_RESERVED_CLASS} .filter-form,
+        body.${SIGNALS_RESERVED_CLASS} .trade-card,
+        body.${SIGNALS_RESERVED_CLASS} .trade-card-wrapper{
           max-width:none!important;
         }
       }
     `;
   }
 
-  function updateScrollbarWidthVar() {
-    try {
-      const width = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-      document.documentElement.style.setProperty(SCROLLBAR_WIDTH_VAR, `${width || 17}px`);
-    } catch (_) {}
-  }
-
-  function isUtilityPage() {
-    const path = location.pathname.toLowerCase();
-    const search = location.search.toLowerCase();
-    if (/history|trend|chart|leaderboard|cooperation|settings|login/.test(path)) return true;
-    if (/history|trend|chart|leaderboard|cooperation|settings|login/.test(search)) return true;
-    if (document.fullscreenElement && document.fullscreenElement.matches?.(".chart-fullscreen-btn, .chart, canvas, svg, div")) return true;
-    return false;
-  }
-
-
   function hideSignalCard(card) {
-    if (!card) return;
-    card.dataset.spreadradarHidden = "true";
-    card.style.setProperty("display", "none", "important");
+    const item = card?.closest?.(".virtuoso-grid-item") || card;
+    if (!item) return;
+    item.classList.add(HIDDEN_CLASS);
+    item.dataset.spreadradarHidden = "true";
   }
 
-  function stopCloseEvent(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation?.();
+  function addCloseButton(card) {
+    if (!card || card.dataset.spreadradarClose === "true") return;
+
+    card.dataset.spreadradarClose = "true";
+    if (getComputedStyle(card).position === "static") {
+      card.style.position = "relative";
+    }
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = CLOSE_CLASS;
+    close.textContent = "×";
+    close.title = "Hide signal";
+
+    const stopCloseEvent = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+    };
+
+    close.addEventListener("pointerdown", stopCloseEvent, true);
+    close.addEventListener("mousedown", stopCloseEvent, true);
+    close.addEventListener("click", (event) => {
+      stopCloseEvent(event);
+      hideSignalCard(card);
+    }, true);
+
+    card.appendChild(close);
   }
 
-  function addSignalCloseButtons() {
-    document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card:not([data-spreadradar-close])`).forEach(card => {
-      card.dataset.spreadradarClose = "true";
-      if (getComputedStyle(card).position === "static") {
-        card.style.setProperty("position", "relative", "important");
-      }
-
-      const close = document.createElement("button");
-      close.type = "button";
-      close.className = "spreadradar-signal-close";
-      close.textContent = "×";
-      close.title = "Hide signal";
-      close.setAttribute("aria-label", "Hide signal");
-
-      close.addEventListener("pointerdown", stopCloseEvent, true);
-      close.addEventListener("mousedown", stopCloseEvent, true);
-      close.addEventListener("touchstart", stopCloseEvent, true);
-      close.addEventListener("click", event => {
-        stopCloseEvent(event);
-        hideSignalCard(card);
-      }, true);
-
-      card.appendChild(close);
+  function clearOldRoots(currentRoot) {
+    $$(`.${PANEL_ROOT_CLASS}`).forEach((root) => {
+      if (root !== currentRoot) root.classList.remove(PANEL_ROOT_CLASS);
     });
-  }
-
-  function hasSignalList() {
-    const list = document.querySelector(SIGNAL_LIST_SELECTOR);
-    return !!list && list.isConnected;
-  }
-
-  function setPanelEnabled(enabled) {
-    if (lastPanelState === enabled && document.body.classList.contains(BODY_CLASS) === enabled) return;
-    lastPanelState = enabled;
-    document.body.classList.toggle(BODY_CLASS, enabled);
   }
 
   function syncSignalPanel() {
-    updateScrollbarWidthVar();
-    const enabled = !isUtilityPage() && window.innerWidth > DESKTOP_MIN_WIDTH && hasSignalList();
-    setPanelEnabled(enabled);
+    injectStyle();
+
+    const shouldDisable = isUtilityPage();
+    const list = shouldDisable ? null : findSignalsList();
+    const root = list ? findPanelRoot(list) : null;
+    const enabled = Boolean(root && window.innerWidth > 1200);
+
+    clearOldRoots(root);
+
+    document.body.classList.toggle(PANEL_ON_CLASS, enabled);
+    document.body.classList.toggle(SIGNALS_RESERVED_CLASS, enabled);
 
     if (!enabled) {
-      document.querySelectorAll(".spreadradar-signal-close").forEach(btn => btn.remove());
-      document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card[data-spreadradar-close]`).forEach(card => {
-        delete card.dataset.spreadradarClose;
-      });
+      $$(`.${CLOSE_CLASS}`).forEach((button) => button.remove());
+      if (root) root.classList.remove(PANEL_ROOT_CLASS);
       return;
     }
 
-    addSignalCloseButtons();
+    root.classList.add(PANEL_ROOT_CLASS);
+    $$(".signal-card", list).forEach(addCloseButton);
   }
 
-  function watchDom() {
-    if (observer) observer.disconnect();
-    observer = new MutationObserver(() => syncSignalPanel());
-    observer.observe(document.documentElement || document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  function watchSpaNavigation() {
-    const checkLocation = () => {
-      if (location.pathname !== lastPath || location.search !== lastSearch) {
-        lastPath = location.pathname;
-        lastSearch = location.search;
-        syncSignalPanel();
-      }
-    };
-
-    const wrapHistoryMethod = (methodName) => {
-      const original = history[methodName];
-      if (typeof original !== "function" || original.__spreadradarPanelWrapped) return;
-      const wrapped = function (...args) {
-        const result = original.apply(this, args);
-        setTimeout(checkLocation, 0);
-        return result;
-      };
-      wrapped.__spreadradarPanelWrapped = true;
-      history[methodName] = wrapped;
-    };
-
-    wrapHistoryMethod("pushState");
-    wrapHistoryMethod("replaceState");
-    window.addEventListener("popstate", checkLocation, true);
-  }
-
-  function init() {
-    updateScrollbarWidthVar();
+  function start() {
     injectStyle();
-    watchDom();
-    watchSpaNavigation();
     syncSignalPanel();
+    setInterval(syncSignalPanel, 1000);
     window.addEventListener("resize", syncSignalPanel, { passive: true });
-    document.addEventListener("fullscreenchange", syncSignalPanel, true);
-    setInterval(syncSignalPanel, SYNC_INTERVAL_MS);
+
+    const observer = new MutationObserver(() => syncSignalPanel());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
+    document.addEventListener("DOMContentLoaded", start, { once: true });
   } else {
-    init();
+    start();
   }
 })();
