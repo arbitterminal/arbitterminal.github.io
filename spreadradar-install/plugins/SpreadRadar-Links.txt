@@ -1,43 +1,37 @@
 // ==UserScript==
-// @name         AT: SpreadRadar Links
+// @name         SpreadRadar for AT
 // @namespace    https://www.arbitterminal.online/
-// @version      1.40.7-inline-live-ft-open
-// @description  Тікери з посиланнями на SpreadRadar, live spread tooltip, inline live spread, FastTrade auto URL, custom Open Spread і кнопка OrderSize
+// @version      1.52-bitget-header
+// @description  Клікабельні тікери у картках сигналів і відкритих картках ArbitTerminal для переходу в SpreadRadar
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
-// @grant        none
-// @connect      https://arbitterminal.github.io
+// @match        https://*.arbitterminal.online/*
+// @connect      spreadradar.net
+// @connect      arbitterminal.github.io
 // @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links.txt
 // @downloadURL  https://arbitterminal.github.io/spreadradar-install/plugins/SpreadRadar-Links.txt
-// @run-at       document-idle
+// @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
   "use strict";
 
-  const BASE_URL = "https://spreadradar.net/";
+const BASE_URL = "https://spreadradar.net/";
   const LIVE_SPREAD_URL = "https://spreadradar.net/api/live-spread";
   const TARGET_WINDOW = "spreadradar_screener";
   const DEFAULT_VIEW = "history";
   const DEFAULT_HOURS = "24";
   const DEFAULT_TYPE = "bbo";
   const LIVE_POLL_MS = 350;
-  const INLINE_LIVE_POLL_MS = 333;
-  const INLINE_LIVE_LIMIT = 4;
-  const INLINE_LIVE_TTL_MS = 12000;
-
-  const DEFAULT_ORDER_USDT = 300;
+  const DEFAULT_LIVE_ORDER_USDT = 300;
   const ORDER_SIZE_OPTIONS = [100, 200, 300, 400, 500];
   const ORDER_SIZE_STORAGE_KEY = "spreadradar-links-order-usdt";
   const ORDER_POSITION_STORAGE_KEY = "spreadradar-links-order-position";
-  const FAST_TRADE_SPREAD_MODE_STORAGE_KEY = "spreadradar-links-fasttrade-spread-mode";
-  const FAST_TRADE_SPREAD_VALUE_STORAGE_KEY = "spreadradar-links-fasttrade-spread-value";
-
-  const STYLE_ID = "spreadradar-links-clean-style";
+  const STYLE_ID = "spreadradar-links-style-v1";
   const TOAST_ID = "spreadradar-links-toast";
   const LIVE_TIP_ID = "spreadradar-live-tip";
   const ORDER_CONTROL_ID = "spreadradar-order-control";
-
   const TOP_LAYER_Z_INDEX = 2147483647;
   const ORDER_BUTTON_WIDTH = 66;
   const ORDER_BUTTON_HEIGHT = 35;
@@ -45,23 +39,15 @@
   const ORDER_PANEL_GAP = 10;
   const ORDER_EDGE_PADDING = 0;
   const ORDER_ATTACH_GAP = 0;
-
   const liveState = {
     tickerEl: null,
     card: null,
     routeKey: "",
     orderQtyBase: null,
-    orderUsdt: DEFAULT_ORDER_USDT,
+    orderUsdt: DEFAULT_LIVE_ORDER_USDT,
     timer: 0,
     controller: null,
     inFlight: false
-  };
-
-  const inlineLiveState = {
-    timer: 0,
-    inFlight: false,
-    orderQtyByRoute: Object.create(null),
-    lastByRoute: Object.create(null)
   };
 
   const EXCHANGE_MAP = {
@@ -72,12 +58,8 @@
     "GATE.IO": "gate",
     BINGX: "bingx",
     BING: "bingx",
-    ASTERDEX: "aster",
-    ASTER: "aster",
-    "ASTER.DEX": "aster"
+    BITGET: "bitget"
   };
-
-  const EXCHANGE_PATTERN = "BINANCE|MEXC|GATEIO|GATE\\.IO|GATE|BINGX|BING|ASTERDEX|ASTER\\.DEX|ASTER";
 
   function injectStyle() {
     let style = document.getElementById(STYLE_ID);
@@ -86,7 +68,6 @@
       style.id = STYLE_ID;
       document.head.appendChild(style);
     }
-
     style.textContent = `
       .trade-card .trade-details strong,
       .signals-list .signal-card [data-help="signal.symbol"],
@@ -103,374 +84,566 @@
       .signals-list .signal-card .header .symbol:hover{
         color:#0d6efd!important;
       }
-      #${LIVE_TIP_ID}{
-        position:fixed;
-        z-index:${TOP_LAYER_Z_INDEX};
-        min-width:220px;
-        max-width:260px;
-        padding:9px 11px;
-        border-radius:7px;
-        background:rgba(17,24,39,.96);
-        border:1px solid rgba(255,255,255,.14);
-        color:#fff;
-        font:14.4px/1.35 Arial,system-ui,sans-serif;
-        box-shadow:0 8px 22px rgba(0,0,0,.28);
-        pointer-events:none;
-        white-space:nowrap;
+      .signals-list .signal-card{
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        flex:0 0 auto!important;
+        align-self:flex-start!important;
+        display:block!important;
+        overflow:visible!important;
       }
-      #${LIVE_TIP_ID} .sr-live-row{
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:12px;
-        margin:2px 0;
-        white-space:nowrap;
+      .signals-list .signal-card .header,
+      .signals-list .signal-card .exchange-info,
+      .signals-list .signal-card .signal-footer,
+      .signals-list .signal-card table{
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
       }
-      #${LIVE_TIP_ID} .sr-live-title{font-weight:800;color:#cbd5e1;letter-spacing:.02em;}
-      #${LIVE_TIP_ID} .sr-live-money{font-weight:900;color:#4ade80;}
-      #${LIVE_TIP_ID} .sr-live-value{font-weight:700;color:#4ade80;}
-      #${LIVE_TIP_ID} .sr-live-warning{font-weight:700;color:#facc15;}
-      #${LIVE_TIP_ID} .sr-live-depth-ok{font-weight:900;color:#4ade80;}
-      #${LIVE_TIP_ID} .sr-live-depth-no{font-weight:900;color:#ff7b7b;}
-      #${LIVE_TIP_ID} .sr-live-muted{color:#aeb8c6;}
-      #${LIVE_TIP_ID} .sr-live-spread{font-size:1.3em;font-weight:900;line-height:1;}
-      #${LIVE_TIP_ID} .sr-live-chart{
-        width:220px;
-        height:34px;
-        margin-top:8px;
-        overflow:visible;
+      body.spreadradar-signals-panel-on .signals-list{
+        position:fixed!important;
+        right:6px!important;
+        top:49px!important;
+        bottom:8px!important;
+        width:450px!important;
+        max-height:none!important;
+        overflow-y:auto!important;
+        overflow-x:hidden!important;
+        background:transparent!important;
+        z-index:100001!important;
+        padding:6px 8px 12px 6px!important;
+        box-sizing:border-box!important;
+        display:block!important;
       }
-      #${LIVE_TIP_ID} .sr-live-chart svg{display:block;width:100%;height:100%;overflow:visible;}
-      #${LIVE_TIP_ID} .sr-chart-zero{stroke:rgba(96,165,250,.62);stroke-width:1.15;stroke-dasharray:3 3;}
-      #${LIVE_TIP_ID} .sr-chart-line{fill:none;stroke:#facc15;stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round;}
-      #${LIVE_TIP_ID} .sr-chart-fill{fill:rgba(250,204,21,.12);stroke:none;}
-      .signals-list .signal-card .spreadradar-inline-live-host{
-        white-space:normal!important;
+      body.spreadradar-signals-panel-on .signals-list .signal-card{
+        width:100%!important;
+        max-width:none!important;
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        flex:0 0 auto!important;
+        align-self:flex-start!important;
+        margin:0 0 8px 0!important;
+        padding:8px 10px 10px!important;
+        border-radius:6px!important;
+        position:relative!important;
+        box-sizing:border-box!important;
+        overflow:visible!important;
+      }
+      body.spreadradar-signals-panel-on .signals-list .signal-card *{box-sizing:border-box!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card table{width:100%!important;table-layout:fixed!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card .exchange-info{table-layout:auto!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card td,
+      body.spreadradar-signals-panel-on .signals-list .signal-card th{
+        min-width:0!important;
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        white-space:nowrap!important;
+      }
+      body.spreadradar-signals-panel-on .signals-list .signal-card .header td:first-child,
+      body.spreadradar-signals-panel-on .signals-list .signal-card td.symbol{
+        width:112px!important;
+        max-width:112px!important;
+      }
+      body.spreadradar-signals-panel-on .signals-list .signal-card .header td:nth-child(2){width:132px!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card .header td:nth-child(3){
+        width:108px!important;
+        max-width:108px!important;
+        text-align:right!important;
+        padding-right:30px!important;
         overflow:visible!important;
         text-overflow:clip!important;
-        vertical-align:top!important;
       }
-      .signals-list .signal-card table.exchange-info td.spreadradar-inline-live-host{
-        min-width:62px!important;
-        width:62px!important;
-        max-width:72px!important;
-        padding:2px 8px 2px 2px!important;
-        vertical-align:middle!important;
-        background:transparent!important;
-        border:0!important;
-        border-radius:0!important;
-        box-shadow:none!important;
+      body.spreadradar-signals-panel-on .signals-list .signal-card .exchange-info td:first-child{width:118px!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card .exchange-info td:nth-child(2),
+      body.spreadradar-signals-panel-on .signals-list .signal-card .exchange-info td:nth-child(3){
+        width:auto!important;
+        overflow:visible!important;
+        text-overflow:clip!important;
+        white-space:nowrap!important;
       }
-      .spreadradar-inline-live{
-        display:inline-block!important;
-        margin-top:2px!important;
-        padding:1px 5px!important;
-        max-width:calc(100% - 6px)!important;
+      body.spreadradar-signals-panel-on .signals-list .signal-card .signal-footer{
+        display:grid!important;
+        grid-template-columns:112px 112px minmax(92px,1fr)!important;
+        align-items:center!important;
+        gap:8px!important;
+        min-height:38px!important;
+        height:auto!important;
+        overflow:visible!important;
+      }
+      body.spreadradar-signals-panel-on .signals-list .signal-card .signal-footer button{
+        width:112px!important;
+        min-width:112px!important;
+        max-width:112px!important;
+        height:31px!important;
+        min-height:31px!important;
+        max-height:31px!important;
+        padding:0 10px!important;
         border-radius:5px!important;
-        background:rgba(17,24,39,.92)!important;
-        border:1px solid rgba(148,163,184,.28)!important;
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 2px rgba(15,23,42,.18)!important;
-        font:800 15px/1 Arial,system-ui,sans-serif!important;
-        letter-spacing:.01em!important;
-        text-decoration:none!important;
-        text-shadow:none!important;
-      }
-      .spreadradar-inline-live.is-positive{color:#4ade80!important;text-shadow:0 0 6px rgba(74,222,128,.22)!important;}
-      .spreadradar-inline-live.is-warning{color:#facc15!important;}
-      .spreadradar-inline-live.is-negative{color:#ef4444!important;}
-      .spreadradar-inline-live.is-muted{color:#94a3b8!important;}
-      .spreadradar-inline-live.is-hidden{display:none!important;}
-      #${TOAST_ID}{
-        position:fixed;
-        left:50%;
-        bottom:24px;
-        transform:translateX(-50%);
-        z-index:${TOP_LAYER_Z_INDEX};
-        padding:9px 14px;
-        border-radius:10px;
-        background:rgba(20,20,24,.94);
-        color:#fff;
-        font:13px/1.3 Arial,system-ui,sans-serif;
-        box-shadow:0 10px 30px rgba(0,0,0,.35);
-        pointer-events:none;
-      }
-      #${ORDER_CONTROL_ID}{
-        position:fixed;
-        left:auto;
-        right:16px;
-        top:72px;
-        z-index:${TOP_LAYER_Z_INDEX - 1};
-        width:${ORDER_BUTTON_WIDTH}px!important;
-        min-width:${ORDER_BUTTON_WIDTH}px!important;
-        max-width:${ORDER_BUTTON_WIDTH}px!important;
-        height:${ORDER_BUTTON_HEIGHT}px!important;
-        min-height:${ORDER_BUTTON_HEIGHT}px!important;
-        max-height:${ORDER_BUTTON_HEIGHT}px!important;
-        font:13px/1.35 Arial,sans-serif;
-        color:#fff;
-        user-select:none;
-      }
-      #${ORDER_CONTROL_ID} .sr-order-wrap{display:block;position:relative;width:${ORDER_BUTTON_WIDTH}px;height:${ORDER_BUTTON_HEIGHT}px;}
-      #${ORDER_CONTROL_ID} .sr-order-main{
-        appearance:none!important;
-        -webkit-appearance:none!important;
-        position:relative!important;
-        width:${ORDER_BUTTON_WIDTH}px!important;
-        min-width:${ORDER_BUTTON_WIDTH}px!important;
-        max-width:${ORDER_BUTTON_WIDTH}px!important;
-        height:${ORDER_BUTTON_HEIGHT}px!important;
-        min-height:${ORDER_BUTTON_HEIGHT}px!important;
-        max-height:${ORDER_BUTTON_HEIGHT}px!important;
-        box-sizing:border-box!important;
+        font:700 13px/1 Arial,sans-serif!important;
         display:inline-flex!important;
         align-items:center!important;
         justify-content:center!important;
-        flex-direction:row!important;
-        gap:1px!important;
-        border:1px solid rgba(134,239,172,.42)!important;
-        border-radius:10px!important;
-        background:linear-gradient(180deg,#43b85c 0%,#2f9f49 100%)!important;
-        color:#fff!important;
-        padding:0 8px!important;
-        margin:0!important;
-        box-shadow:0 2px 7px rgba(15,23,42,.28),inset 0 1px 0 rgba(255,255,255,.2)!important;
-        cursor:grab!important;
-        touch-action:none!important;
+        white-space:nowrap!important;
         overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        box-sizing:border-box!important;
+        margin:0!important;
+        background:linear-gradient(#ffffff,#f1f5f9)!important;
+        color:#111827!important;
+        border:1px solid #aeb8c6!important;
+        box-shadow:0 1px 2px rgba(15,23,42,.12)!important;
+        cursor:pointer!important;
       }
-      #${ORDER_CONTROL_ID}.sr-order-dragging .sr-order-main{cursor:grabbing!important;opacity:.92;}
-      #${ORDER_CONTROL_ID} .sr-order-main:hover{
-        border-color:rgba(187,247,208,.74)!important;
-        box-shadow:0 3px 9px rgba(15,23,42,.34),0 0 0 2px rgba(34,197,94,.16),inset 0 1px 0 rgba(255,255,255,.25)!important;
+      body.spreadradar-signals-panel-on .signals-list .signal-card .signal-footer button:hover{background:linear-gradient(#f8fafc,#e8eef6)!important;border-color:#7d8da3!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card .signal-footer button:active{transform:translateY(1px)!important}
+      body.spreadradar-signals-panel-on .signals-list .signal-card .signal-footer .signal-time{
+        display:block!important;
+        min-width:0!important;
+        overflow:visible!important;
+        text-overflow:clip!important;
+        white-space:nowrap!important;
+        font-size:12px!important;
+        line-height:1.25!important;
+        font-weight:800!important;
+        text-align:left!important;
       }
-      #${ORDER_CONTROL_ID} .sr-order-caption{display:none!important;}
-      #${ORDER_CONTROL_ID} .sr-order-current{font:800 15px/${ORDER_BUTTON_HEIGHT}px Arial,Helvetica,sans-serif!important;color:#fff!important;text-shadow:0 1px 1px rgba(0,0,0,.22);}
-      #${ORDER_CONTROL_ID} .sr-order-panel{
-        display:none;
-        position:absolute;
-        right:calc(100% + ${ORDER_PANEL_GAP}px);
-        top:0;
-        width:${ORDER_PANEL_WIDTH}px;
-        padding:8px;
-        border-radius:8px;
-        background:rgba(17,24,39,.97);
-        border:1px solid rgba(255,255,255,.14);
-        box-shadow:0 10px 28px rgba(0,0,0,.32);
+      body.spreadradar-signals-panel-on main,
+      body.spreadradar-signals-panel-on .page-content,
+      body.spreadradar-signals-panel-on .content,
+      body.spreadradar-signals-panel-on .main-content,
+      body.spreadradar-signals-panel-on #root>div{
+        max-width:calc(100vw - 470px)!important;
       }
-      #${ORDER_CONTROL_ID}.sr-order-panel-right .sr-order-panel{right:auto;left:calc(100% + ${ORDER_PANEL_GAP}px);}
-      #${ORDER_CONTROL_ID}.sr-order-panel-up .sr-order-panel{top:auto;bottom:0;}
-      #${ORDER_CONTROL_ID}:hover .sr-order-panel,
-      #${ORDER_CONTROL_ID}.sr-order-open .sr-order-panel{display:block;}
-      #${ORDER_CONTROL_ID} .sr-order-options{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
-      #${ORDER_CONTROL_ID} .sr-order-option{
-        border:1px solid rgba(255,255,255,.16);
-        background:rgba(255,255,255,.08);
-        color:#fff;
-        border-radius:6px;
-        padding:6px 4px;
-        cursor:pointer;
-        font:700 12px/1 Arial,sans-serif;
+      .spreadradar-signal-close{
+        position:absolute!important;
+        top:3px!important;
+        right:5px!important;
+        left:auto!important;
+        width:20px!important;
+        min-width:20px!important;
+        max-width:20px!important;
+        height:20px!important;
+        min-height:20px!important;
+        max-height:20px!important;
+        padding:0!important;
+        margin:0!important;
+        box-sizing:border-box!important;
+        border:0!important;
+        border-radius:5px!important;
+        background:#dc3545!important;
+        color:#fff!important;
+        font:700 14px/20px Arial,sans-serif!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        cursor:pointer!important;
+        z-index:1000!important;
+        opacity:.85!important;
+        pointer-events:auto!important;
       }
-      #${ORDER_CONTROL_ID} .sr-order-option:hover{background:rgba(255,255,255,.14);}
-      #${ORDER_CONTROL_ID} .sr-order-option.is-active{border-color:#4ade80;background:rgba(74,222,128,.18);color:#bbf7d0;}
-      #${ORDER_CONTROL_ID} .sr-ft-spread-settings{
-        margin-top:8px;
-        padding-top:7px;
-        border-top:1px solid rgba(255,255,255,.13);
-        display:grid;
-        grid-template-columns:1fr 74px;
-        gap:7px;
-        align-items:center;
+      .spreadradar-signal-close:hover{opacity:1!important}
+      @media(max-width:1200px){
+        body.spreadradar-signals-panel-on .signals-list{position:static!important;width:auto!important}
+        body.spreadradar-signals-panel-on main,
+        body.spreadradar-signals-panel-on .page-content,
+        body.spreadradar-signals-panel-on .content,
+        body.spreadradar-signals-panel-on .main-content,
+        body.spreadradar-signals-panel-on #root>div{max-width:none!important}
       }
-      #${ORDER_CONTROL_ID} .sr-ft-toggle{
-        display:flex;
-        align-items:center;
-        gap:5px;
-        color:#dbeafe;
-        font:800 12px/1.2 Arial,sans-serif;
+      #${TOAST_ID}{
+        position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+        z-index:${TOP_LAYER_Z_INDEX};background:rgba(20,22,26,.95);color:#fff;
+        padding:10px 16px;border-radius:6px;font:13px/1.35 Arial,sans-serif;
+        box-shadow:0 4px 18px rgba(0,0,0,.22);pointer-events:none;
+      }
+      #${LIVE_TIP_ID}{
+        position:fixed;z-index:${TOP_LAYER_Z_INDEX};min-width:220px;
+        background:rgba(17,24,39,.96);color:#fff;border:1px solid rgba(255,255,255,.14);
+        border-radius:7px;padding:9px 11px;font:14.4px/1.35 Arial,sans-serif;
+        box-shadow:0 8px 22px rgba(0,0,0,.28);pointer-events:none;
         white-space:nowrap;
       }
-      #${ORDER_CONTROL_ID} .sr-ft-toggle input{margin:0;}
-      #${ORDER_CONTROL_ID} .sr-ft-spread-input{
-        width:74px;
-        box-sizing:border-box;
-        border:1px solid rgba(255,255,255,.22);
-        border-radius:6px;
-        background:rgba(255,255,255,.1);
-        color:#fff;
-        padding:5px 6px;
-        font:800 12px/1 Arial,sans-serif;
-        outline:none;
-        text-align:right;
+      #${LIVE_TIP_ID} .sr-live-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+      #${LIVE_TIP_ID} .sr-live-label{color:#aeb8c6}
+      #${LIVE_TIP_ID} .sr-live-value{font-weight:700;color:#4ade80}
+      #${LIVE_TIP_ID} .sr-live-warning{font-weight:700;color:#facc15}
+      #${LIVE_TIP_ID} .sr-live-close{color:#f87171}
+      #${LIVE_TIP_ID} .sr-live-muted{color:#aeb8c6}
+      #${LIVE_TIP_ID} .sr-live-title{font-weight:800;color:#cbd5e1;letter-spacing:.02em}
+      #${LIVE_TIP_ID} .sr-live-money{font-weight:900;color:#4ade80}
+      #${LIVE_TIP_ID} .sr-live-spread{font-size:1.3em;font-weight:900;line-height:1}
+      #${LIVE_TIP_ID} .sr-live-depth-ok{font-weight:900;color:#4ade80}
+      #${LIVE_TIP_ID} .sr-live-depth-no{font-weight:900;color:#ff7b7b}
+      #${LIVE_TIP_ID} .sr-live-chart{width:220px;height:34px;margin-top:8px}
+      #${LIVE_TIP_ID} .sr-live-chart svg{display:block;width:100%;height:100%;overflow:visible}
+      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-zero{stroke:rgba(96,165,250,.62);stroke-width:1.15;stroke-dasharray:3 3}
+      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-line{fill:none;stroke:#facc15;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}
+      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-fill{fill:rgba(250,204,21,.12)}
+      #${ORDER_CONTROL_ID}{
+        position:fixed;right:16px;top:72px;z-index:${TOP_LAYER_Z_INDEX};
+        width:${ORDER_BUTTON_WIDTH}px!important;min-width:${ORDER_BUTTON_WIDTH}px!important;max-width:${ORDER_BUTTON_WIDTH}px!important;
+        height:${ORDER_BUTTON_HEIGHT}px!important;min-height:${ORDER_BUTTON_HEIGHT}px!important;max-height:${ORDER_BUTTON_HEIGHT}px!important;
+        font:13px/1.35 Arial,sans-serif;color:#fff;
       }
-      #${ORDER_CONTROL_ID} .sr-ft-spread-input:disabled{opacity:.55;cursor:not-allowed;}
-      #${ORDER_CONTROL_ID} .sr-ft-spread-input:focus{border-color:#60a5fa;background:rgba(255,255,255,.15);}
-      #${ORDER_CONTROL_ID} .sr-ft-spread-hint{
-        grid-column:1 / -1;
-        color:#94a3b8;
-        font:700 10.5px/1.25 Arial,sans-serif;
-        margin-top:-2px;
-      }    `;
+      #${ORDER_CONTROL_ID} .sr-order-toggle{
+        appearance:none!important;-webkit-appearance:none!important;
+        position:relative!important;width:${ORDER_BUTTON_WIDTH}px!important;min-width:${ORDER_BUTTON_WIDTH}px!important;max-width:${ORDER_BUTTON_WIDTH}px!important;
+        height:${ORDER_BUTTON_HEIGHT}px!important;min-height:${ORDER_BUTTON_HEIGHT}px!important;max-height:${ORDER_BUTTON_HEIGHT}px!important;
+        line-height:${ORDER_BUTTON_HEIGHT}px!important;
+        box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+        gap:0!important;border:1px solid rgba(134,239,172,.42)!important;border-radius:10px!important;
+        background:linear-gradient(180deg,#43b85c 0%,#2f9f49 100%)!important;
+        color:#fff!important;padding:0 8px!important;margin:0!important;
+        box-shadow:0 2px 7px rgba(15,23,42,.28),inset 0 1px 0 rgba(255,255,255,.2)!important;
+        cursor:grab!important;touch-action:none!important;user-select:none!important;overflow:hidden!important;
+      }
+      #${ORDER_CONTROL_ID}.sr-order-dragging .sr-order-toggle{
+        cursor:grabbing!important;opacity:.92;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-toggle:hover{
+        border-color:rgba(187,247,208,.74)!important;box-shadow:0 3px 9px rgba(15,23,42,.34),0 0 0 2px rgba(34,197,94,.16),inset 0 1px 0 rgba(255,255,255,.25)!important;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-icon{
+        display:none!important;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-amount{
+        position:relative;z-index:1;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+        gap:1px!important;height:${ORDER_BUTTON_HEIGHT}px!important;white-space:nowrap!important;
+        font-family:Arial,Helvetica,sans-serif!important;text-shadow:0 1px 1px rgba(0,0,0,.22);
+      }
+      #${ORDER_CONTROL_ID} .sr-order-currency{
+        color:#fff!important;font:800 15px/${ORDER_BUTTON_HEIGHT}px Arial,Helvetica,sans-serif!important;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-number{
+        color:#fff!important;font:800 15px/${ORDER_BUTTON_HEIGHT}px Arial,Helvetica,sans-serif!important;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-panel{
+        position:absolute;right:calc(100% + ${ORDER_PANEL_GAP}px);top:0;width:${ORDER_PANEL_WIDTH}px;z-index:${TOP_LAYER_Z_INDEX};
+        border:1px solid rgba(255,255,255,.14);border-radius:8px;
+        background:rgba(17,24,39,.97);box-shadow:0 10px 28px rgba(0,0,0,.32);
+        padding:11px;
+      }
+      #${ORDER_CONTROL_ID}.sr-order-panel-right .sr-order-panel{
+        right:auto;left:calc(100% + ${ORDER_PANEL_GAP}px);
+      }
+      #${ORDER_CONTROL_ID}.sr-order-panel-up .sr-order-panel{
+        top:auto;bottom:0;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-panel[hidden]{display:none}
+      #${ORDER_CONTROL_ID} .sr-order-head{
+        display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-title{color:#aeb8c6}
+      #${ORDER_CONTROL_ID} .sr-order-value{font-size:15px;color:#4ade80}
+      #${ORDER_CONTROL_ID} .sr-order-range{width:100%;margin:5px 0 10px;accent-color:#0d6efd}
+      #${ORDER_CONTROL_ID} .sr-order-buttons{
+        display:grid;grid-template-columns:repeat(5,1fr);gap:5px;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-choice{
+        border:1px solid rgba(255,255,255,.16);border-radius:6px;
+        background:rgba(255,255,255,.08);color:#fff;padding:5px 0;
+        cursor:pointer;font:700 12px/1 Arial,sans-serif;
+      }
+      #${ORDER_CONTROL_ID} .sr-order-choice:hover{background:rgba(255,255,255,.14)}
+      #${ORDER_CONTROL_ID} .sr-order-choice.is-active{
+        border-color:#4ade80;background:rgba(74,222,128,.18);color:#bbf7d0;
+      }
+    `;
   }
 
   function showMessage(text) {
-    let toast = document.getElementById(TOAST_ID);
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = TOAST_ID;
-      document.body.appendChild(toast);
-    }
+    document.getElementById(TOAST_ID)?.remove();
+    const toast = document.createElement("div");
+    toast.id = TOAST_ID;
     toast.textContent = text;
-    clearTimeout(toast._srTimer);
-    toast._srTimer = setTimeout(() => toast.remove(), 2500);
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 250); }, 1800);
   }
 
   function normalizeOrderUsdt(value) {
     const n = Number(value);
-    if (!Number.isFinite(n) || n <= 0) return DEFAULT_ORDER_USDT;
-    const rounded = Math.round(n);
-    return ORDER_SIZE_OPTIONS.includes(rounded) ? rounded : DEFAULT_ORDER_USDT;
+    if (!Number.isFinite(n)) return DEFAULT_LIVE_ORDER_USDT;
+    return ORDER_SIZE_OPTIONS.reduce((best, option) => (
+      Math.abs(option - n) < Math.abs(best - n) ? option : best
+    ), ORDER_SIZE_OPTIONS[0]);
   }
 
   function getStoredOrderUsdt() {
-    return normalizeOrderUsdt(localStorage.getItem(ORDER_SIZE_STORAGE_KEY) || DEFAULT_ORDER_USDT);
+    try {
+      return normalizeOrderUsdt(localStorage.getItem(ORDER_SIZE_STORAGE_KEY) || DEFAULT_LIVE_ORDER_USDT);
+    } catch (_) {
+      return DEFAULT_LIVE_ORDER_USDT;
+    }
   }
 
   function saveOrderUsdt(value) {
-    localStorage.setItem(ORDER_SIZE_STORAGE_KEY, String(normalizeOrderUsdt(value)));
-  }
-
-  function normalizeSpreadInput(value) {
-    const text = String(value || "").trim().replace(",", ".");
-    if (!text) return "";
-    const n = Number(text);
-    if (!Number.isFinite(n)) return "";
-    return String(Math.round(n * 1000) / 1000);
-  }
-
-  function getFastTradeSpreadMode() {
-    return localStorage.getItem(FAST_TRADE_SPREAD_MODE_STORAGE_KEY) === "custom" ? "custom" : "link";
-  }
-
-  function saveFastTradeSpreadMode(mode) {
-    localStorage.setItem(FAST_TRADE_SPREAD_MODE_STORAGE_KEY, mode === "custom" ? "custom" : "link");
-  }
-
-  function getFastTradeSpreadValue() {
-    return normalizeSpreadInput(localStorage.getItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY) || "");
-  }
-
-  function saveFastTradeSpreadValue(value) {
-    const normalized = normalizeSpreadInput(value);
-    if (normalized) localStorage.setItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY, normalized);
-    else localStorage.removeItem(FAST_TRADE_SPREAD_VALUE_STORAGE_KEY);
-    return normalized;
-  }
-
-  function getFastTradeSignalSpread(urlSignalSpread) {
-    const customValue = Number(getFastTradeSpreadValue());
-    if (getFastTradeSpreadMode() === "custom" && Number.isFinite(customValue)) return customValue;
-    return Number.isFinite(urlSignalSpread) ? urlSignalSpread : 0;
+    const orderUsdt = normalizeOrderUsdt(value);
+    try {
+      localStorage.setItem(ORDER_SIZE_STORAGE_KEY, String(orderUsdt));
+    } catch (_) {}
+    return orderUsdt;
   }
 
   function getLiveOrderUsdt() {
     return normalizeOrderUsdt(liveState.orderUsdt || getStoredOrderUsdt());
   }
 
+  function getDirectText(el) {
+    return Array.from(el.childNodes || [])
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent || "")
+      .join(" ")
+      .trim();
+  }
+
+  function getFlatText(el) {
+    return String(el?.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
+  function isVisibleElement(el) {
+    if (!(el instanceof Element)) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const style = getComputedStyle(el);
+    return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  }
+
+  function hasAncestorText(el, regex) {
+    let node = el;
+    for (let i = 0; node && i < 5; i += 1, node = node.parentElement) {
+      if (regex.test(getFlatText(node))) return true;
+    }
+    return false;
+  }
+
+  function findTextStyleSource(textRegex, contextRegex) {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    let best = null;
+    document.querySelectorAll("body *").forEach((el) => {
+      if (control?.contains(el) || !isVisibleElement(el)) return;
+      const ownText = getDirectText(el);
+      const flatText = getFlatText(el);
+      if (!textRegex.test(ownText) && !textRegex.test(flatText)) return;
+      if (contextRegex && !hasAncestorText(el, contextRegex)) return;
+
+      let score = flatText.length + el.children.length * 24;
+      if (textRegex.test(ownText)) score -= 120;
+      if (contextRegex?.test(flatText)) score -= 30;
+      if (!best || score < best.score) best = { el, score };
+    });
+    return best?.el || null;
+  }
+
+  function copyTextStyle(source, target) {
+    if (!source || !target) return;
+    const style = getComputedStyle(source);
+    [
+      "font-family",
+      "font-size",
+      "font-weight",
+      "font-style",
+      "font-stretch",
+      "line-height",
+      "letter-spacing",
+      "color",
+      "text-shadow",
+      "font-variant-numeric"
+    ].forEach((prop) => {
+      const value = style.getPropertyValue(prop);
+      if (value) target.style.setProperty(prop, value, "important");
+    });
+  }
+
+  function syncOrderTypography() {
+    // The order button intentionally uses its own Auto-style design.
+  }
+
+  function getElementLabel(el) {
+    return [
+      el.getAttribute?.("aria-label"),
+      el.getAttribute?.("title"),
+      el.getAttribute?.("data-testid"),
+      el.getAttribute?.("class"),
+      el.id,
+      getDirectText(el)
+    ].filter(Boolean).join(" ").toLowerCase();
+  }
+
   function getStoredOrderPosition() {
     try {
-      const raw = JSON.parse(localStorage.getItem(ORDER_POSITION_STORAGE_KEY) || "null");
-      if (!raw || typeof raw !== "object") return null;
-      const left = Number(raw.left);
-      const top = Number(raw.top);
-      if (Number.isFinite(left) && Number.isFinite(top)) return { left, top };
-      if (raw.side && Number.isFinite(Number(raw.top))) {
-        const fallbackLeft = raw.side === "right"
-          ? window.innerWidth - ORDER_BUTTON_WIDTH - 16
-          : 16;
-        return { left: fallbackLeft, top: Number(raw.top) };
-      }
-      return null;
+      const parsed = JSON.parse(localStorage.getItem(ORDER_POSITION_STORAGE_KEY) || "null");
+      if (!parsed) return null;
+      const left = Number(parsed.left);
+      const top = Number(parsed.top);
+      return Number.isFinite(left) && Number.isFinite(top) ? { left, top } : null;
     } catch (_) {
       return null;
     }
   }
 
   function clampOrderPosition(left, top) {
-    const root = document.getElementById(ORDER_CONTROL_ID);
-    const width = root?.offsetWidth || ORDER_BUTTON_WIDTH;
-    const height = root?.offsetHeight || ORDER_BUTTON_HEIGHT;
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    const width = control?.offsetWidth || ORDER_BUTTON_WIDTH;
+    const height = control?.offsetHeight || ORDER_BUTTON_HEIGHT;
     const maxLeft = Math.max(ORDER_EDGE_PADDING, window.innerWidth - width - ORDER_EDGE_PADDING);
     const maxTop = Math.max(ORDER_EDGE_PADDING, window.innerHeight - height - ORDER_EDGE_PADDING);
     return {
-      left: Math.min(maxLeft, Math.max(ORDER_EDGE_PADDING, Math.round(Number(left) || 0))),
-      top: Math.min(maxTop, Math.max(ORDER_EDGE_PADDING, Math.round(Number(top) || 0)))
+      left: Math.min(maxLeft, Math.max(ORDER_EDGE_PADDING, Math.round(left))),
+      top: Math.min(maxTop, Math.max(ORDER_EDGE_PADDING, Math.round(top)))
     };
   }
 
-  function updateOrderPanelDirection(root, left, top) {
-    if (!root) return;
-    root.classList.toggle("sr-order-panel-right", left < ORDER_PANEL_WIDTH + ORDER_PANEL_GAP + ORDER_EDGE_PADDING);
-    root.classList.toggle("sr-order-panel-up", top > window.innerHeight - 150);
+  function updateOrderPanelDirection(left, top) {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    if (!control) return;
+    control.classList.toggle("sr-order-panel-right", left < ORDER_PANEL_WIDTH + ORDER_PANEL_GAP + ORDER_EDGE_PADDING);
+    control.classList.toggle("sr-order-panel-up", top > window.innerHeight - 150);
   }
 
-  function applyOrderPosition(root, pos) {
-    if (!root) return;
-    const fallback = getStoredOrderPosition() || { left: window.innerWidth - ORDER_BUTTON_WIDTH - 16, top: 72 };
-    const next = clampOrderPosition(pos?.left ?? fallback.left, pos?.top ?? fallback.top);
-    root.style.left = `${next.left}px`;
-    root.style.top = `${next.top}px`;
-    root.style.right = "auto";
-    updateOrderPanelDirection(root, next.left, next.top);
+  function applyOrderPosition(left, top) {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    if (!control) return;
+    const pos = clampOrderPosition(left, top);
+    control.style.left = `${pos.left}px`;
+    control.style.top = `${pos.top}px`;
+    control.style.right = "auto";
+    updateOrderPanelDirection(pos.left, pos.top);
   }
 
-  function saveOrderPosition(root, pos) {
-    const next = clampOrderPosition(pos?.left, pos?.top);
-    localStorage.setItem(ORDER_POSITION_STORAGE_KEY, JSON.stringify(next));
-    applyOrderPosition(root, next);
+  function saveOrderPosition(left, top) {
+    const pos = clampOrderPosition(left, top);
+    try {
+      localStorage.setItem(ORDER_POSITION_STORAGE_KEY, JSON.stringify(pos));
+    } catch (_) {}
+    applyOrderPosition(pos.left, pos.top);
   }
 
-  function updateOrderControl(root = document.getElementById(ORDER_CONTROL_ID)) {
-    if (!root) return;
-    const current = getStoredOrderUsdt();
-    const valueEl = root.querySelector(".sr-order-current");
-    if (valueEl) valueEl.textContent = `${current}$`;
-    root.querySelectorAll(".sr-order-option").forEach(btn => {
-      btn.classList.toggle("is-active", Number(btn.dataset.value) === current);
+  function findSettingsAnchor() {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    const seen = new Set();
+    const candidates = [];
+    const nodes = [
+      ...document.querySelectorAll("button,[role='button'],a,[aria-label],[title],svg,i,[class*='gear'],[class*='cog'],[class*='setting']")
+    ];
+    document.querySelectorAll("body *").forEach((node) => {
+      if (getDirectText(node).includes("⚙")) nodes.push(node);
     });
 
-    const customToggle = root.querySelector(".sr-ft-custom-toggle");
-    const spreadInput = root.querySelector(".sr-ft-spread-input");
-    const isCustom = getFastTradeSpreadMode() === "custom";
-    if (customToggle) customToggle.checked = isCustom;
-    if (spreadInput) {
-      spreadInput.value = getFastTradeSpreadValue();
-      spreadInput.disabled = !isCustom;
+    nodes.forEach((node) => {
+      const el = node.closest?.("button,[role='button'],a") || node;
+      if (!el || seen.has(el) || control?.contains(el)) return;
+      seen.add(el);
+      const rect = el.getBoundingClientRect?.();
+      if (!rect || rect.width < 10 || rect.height < 10) return;
+      if (rect.width > 90 || rect.height > 90) return;
+      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) return;
+      const label = getElementLabel(el);
+      const directText = getDirectText(el);
+      const looksLikeSettings =
+        label.includes("settings") ||
+        label.includes("setting") ||
+        label.includes("gear") ||
+        label.includes("cog") ||
+        label.includes("config") ||
+        label.includes("option") ||
+        label.includes("налашт") ||
+        label.includes("параметр") ||
+        label.includes("настрой") ||
+        label.includes("шестер") ||
+        label.includes("lucide-settings") ||
+        label.includes("fa-gear") ||
+        label.includes("fa-cog") ||
+        label.includes("⚙") ||
+        directText.includes("⚙");
+      if (!looksLikeSettings) return;
+      candidates.push({ el, rect, label, directText });
+    });
+
+    candidates.sort((a, b) => {
+      const score = (candidate) => {
+        const { rect, label, directText } = candidate;
+        const rightGap = Math.max(0, window.innerWidth - rect.right);
+        let value = rightGap * 2 + Math.abs(rect.width - 42) + Math.abs(rect.height - 42);
+        if (directText.includes("⚙") || label.includes("⚙")) value -= 260;
+        if (rect.top > 120) value -= 180;
+        if (rect.right > window.innerWidth - 160) value -= 100;
+        if (rect.top < 115) value += 160;
+        return value;
+      };
+      const aScore = score(a);
+      const bScore = score(b);
+      return aScore - bScore;
+    });
+    return candidates[0]?.el || null;
+  }
+
+  function positionOrderControl() {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    if (!control) return;
+    const saved = getStoredOrderPosition();
+    if (saved) {
+      applyOrderPosition(saved.left, saved.top);
+      return;
     }
 
-    const rect = root.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) applyOrderPosition(root, { left: rect.left, top: rect.top });
+    const anchor = findSettingsAnchor();
+    if (!anchor) {
+      applyOrderPosition(window.innerWidth - (control.offsetWidth || ORDER_BUTTON_WIDTH) - 16, 72);
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const width = control.offsetWidth || ORDER_BUTTON_WIDTH;
+    const height = control.offsetHeight || ORDER_BUTTON_HEIGHT;
+    const left = Math.min(window.innerWidth - width - ORDER_EDGE_PADDING, Math.max(ORDER_EDGE_PADDING, Math.round(rect.left + rect.width / 2 - width / 2)));
+    const top = Math.min(window.innerHeight - height - ORDER_EDGE_PADDING, Math.max(ORDER_EDGE_PADDING, Math.round(rect.top - height - ORDER_ATTACH_GAP)));
+    applyOrderPosition(left, top);
+  }
+
+  function updateOrderControl() {
+    const control = document.getElementById(ORDER_CONTROL_ID);
+    if (!control) return;
+    const value = getStoredOrderUsdt();
+    control.querySelectorAll("[data-sr-order-value]").forEach((el) => {
+      el.textContent = `$${value}`;
+    });
+    control.querySelectorAll("[data-sr-order-number]").forEach((el) => {
+      el.textContent = String(value);
+    });
+    const range = control.querySelector(".sr-order-range");
+    if (range) range.value = String(value);
+    const toggle = control.querySelector(".sr-order-toggle");
+    if (toggle) toggle.title = `SpreadRadar order size: $${value}`;
+    control.querySelectorAll(".sr-order-choice").forEach((button) => {
+      button.classList.toggle("is-active", Number(button.dataset.value) === value);
+    });
+    syncOrderTypography();
+    positionOrderControl();
   }
 
   function setOrderUsdt(value) {
-    const next = normalizeOrderUsdt(value);
-    saveOrderUsdt(next);
-    liveState.orderUsdt = next;
+    const orderUsdt = saveOrderUsdt(value);
+    liveState.orderUsdt = orderUsdt;
     liveState.orderQtyBase = null;
+    liveState.controller?.abort?.();
+    liveState.controller = null;
+    liveState.inFlight = false;
     updateOrderControl();
-    if (liveState.routeKey) pollLiveSpread();
+    if (liveState.routeKey) {
+      renderLiveTip('<div class="sr-live-muted">Loading live spread...</div>');
+      pollLiveSpread();
+    }
   }
 
-  function installOrderDrag(root, handle) {
-    if (!root || !handle || root.dataset.dragReady === "true") return;
-    root.dataset.dragReady = "true";
-
+  function installOrderDrag(control, toggle, panel) {
     let drag = null;
     let suppressNextClick = false;
 
-    handle.addEventListener("pointerdown", event => {
+    toggle.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
-      const rect = root.getBoundingClientRect();
+      const rect = control.getBoundingClientRect();
       drag = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -479,118 +652,124 @@
         startTop: rect.top,
         moved: false
       };
-      handle.setPointerCapture?.(event.pointerId);
-      event.preventDefault();
+      toggle.setPointerCapture?.(event.pointerId);
     });
 
-    handle.addEventListener("pointermove", event => {
+    toggle.addEventListener("pointermove", (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
       const dx = event.clientX - drag.startX;
       const dy = event.clientY - drag.startY;
       if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
       drag.moved = true;
       suppressNextClick = true;
-      root.classList.add("sr-order-dragging");
-      root.classList.remove("sr-order-open");
-      applyOrderPosition(root, { left: drag.startLeft + dx, top: drag.startTop + dy });
+      panel.hidden = true;
+      control.classList.add("sr-order-dragging");
+      applyOrderPosition(drag.startLeft + dx, drag.startTop + dy);
       event.preventDefault();
     });
 
-    const finishDrag = event => {
+    function finishDrag(event) {
       if (!drag || event.pointerId !== drag.pointerId) return;
-      handle.releasePointerCapture?.(event.pointerId);
-      root.classList.remove("sr-order-dragging");
+      toggle.releasePointerCapture?.(event.pointerId);
+      control.classList.remove("sr-order-dragging");
       if (drag.moved) {
-        const rect = root.getBoundingClientRect();
-        saveOrderPosition(root, { left: rect.left, top: rect.top });
+        const rect = control.getBoundingClientRect();
+        saveOrderPosition(rect.left, rect.top);
         setTimeout(() => { suppressNextClick = false; }, 0);
       }
       drag = null;
+    }
+
+    toggle.addEventListener("pointerup", finishDrag);
+    toggle.addEventListener("pointercancel", finishDrag);
+
+    return () => {
+      if (!suppressNextClick) return false;
+      suppressNextClick = false;
+      return true;
     };
-
-    handle.addEventListener("pointerup", finishDrag);
-    handle.addEventListener("pointercancel", finishDrag);
-
-    handle.addEventListener("click", event => {
-      if (suppressNextClick) {
-        suppressNextClick = false;
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-      root.classList.toggle("sr-order-open");
-    }, true);
   }
 
   function ensureOrderControl() {
-    let root = document.getElementById(ORDER_CONTROL_ID);
-    if (!root) {
-      root = document.createElement("div");
-      root.id = ORDER_CONTROL_ID;
-      root.innerHTML = `
-        <div class="sr-order-wrap">
-          <button type="button" class="sr-order-main" title="SpreadRadar OrderSize">
-            <span class="sr-order-caption">Order</span>
-            <span class="sr-order-current"></span>
-          </button>
-          <div class="sr-order-panel">
-            <div class="sr-order-options">
-              ${ORDER_SIZE_OPTIONS.map(value => `<button type="button" class="sr-order-option" data-value="${value}">${value}</button>`).join("")}
-            </div>
-            <div class="sr-ft-spread-settings">
-              <label class="sr-ft-toggle" title="Use custom Open Spread for FastTrade auto links">
-                <input type="checkbox" class="sr-ft-custom-toggle">
-                FT Open %
-              </label>
-              <input type="text" class="sr-ft-spread-input" inputmode="decimal" placeholder="0.374" title="Custom Open Spread for FastTrade">
-              <div class="sr-ft-spread-hint">off = spread from link</div>
-            </div>
-          </div>
-        </div>`;
-      document.body.appendChild(root);
-      root.querySelectorAll(".sr-order-option").forEach(btn => {
-        btn.addEventListener("click", event => {
-          event.preventDefault();
-          event.stopPropagation();
-          setOrderUsdt(btn.dataset.value);
-          root.classList.remove("sr-order-open");
-        });
-      });
+    if (!document.body || document.getElementById(ORDER_CONTROL_ID)) return;
+    const current = getStoredOrderUsdt();
+    const control = document.createElement("div");
+    control.id = ORDER_CONTROL_ID;
+    control.innerHTML = `
+      <button type="button" class="sr-order-toggle" title="SpreadRadar order size">
+        <span class="sr-order-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 7h4m4 0h8M4 17h8m4 0h4M8 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm4 10a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="sr-order-amount">
+          <span class="sr-order-currency">$</span><span class="sr-order-number" data-sr-order-number>${current}</span>
+        </span>
+      </button>
+      <div class="sr-order-panel" hidden>
+        <div class="sr-order-head">
+          <span class="sr-order-title">Order size</span>
+          <strong class="sr-order-value" data-sr-order-value>$${current}</strong>
+        </div>
+        <input class="sr-order-range" type="range" min="100" max="500" step="100" value="${current}">
+        <div class="sr-order-buttons">
+          ${ORDER_SIZE_OPTIONS.map((value) => `<button type="button" class="sr-order-choice" data-value="${value}">${value}</button>`).join("")}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(control);
 
-      const customToggle = root.querySelector(".sr-ft-custom-toggle");
-      const spreadInput = root.querySelector(".sr-ft-spread-input");
-      customToggle?.addEventListener("change", event => {
-        event.stopPropagation();
-        saveFastTradeSpreadMode(customToggle.checked ? "custom" : "link");
-        updateOrderControl(root);
-      });
-      spreadInput?.addEventListener("change", event => {
-        event.stopPropagation();
-        const saved = saveFastTradeSpreadValue(spreadInput.value);
-        spreadInput.value = saved;
-        if (saved) saveFastTradeSpreadMode("custom");
-        updateOrderControl(root);
-      });
-      spreadInput?.addEventListener("keydown", event => {
-        if (event.key === "Enter") spreadInput.blur();
-      });
+    const panel = control.querySelector(".sr-order-panel");
+    const toggle = control.querySelector(".sr-order-toggle");
+    const range = control.querySelector(".sr-order-range");
+    const shouldSuppressClick = installOrderDrag(control, toggle, panel);
 
-      installOrderDrag(root, root.querySelector(".sr-order-main"));
-    }
-    applyOrderPosition(root, getStoredOrderPosition());
-    updateOrderControl(root);
-    return root;
+    toggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (shouldSuppressClick()) return;
+      panel.hidden = !panel.hidden;
+    });
+    range.addEventListener("input", () => setOrderUsdt(range.value));
+    control.querySelectorAll(".sr-order-choice").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setOrderUsdt(button.dataset.value);
+      });
+    });
+    control.addEventListener("click", (event) => event.stopPropagation());
+    document.addEventListener("click", () => { panel.hidden = true; }, true);
+    window.addEventListener("resize", () => {
+      const saved = getStoredOrderPosition();
+      if (saved) saveOrderPosition(saved.left, saved.top);
+      else positionOrderControl();
+    }, { passive: true });
+    window.addEventListener("scroll", positionOrderControl, { passive: true });
+    setTimeout(positionOrderControl, 250);
+    setTimeout(positionOrderControl, 1000);
+    setTimeout(positionOrderControl, 2500);
+    setTimeout(syncOrderTypography, 250);
+    setTimeout(syncOrderTypography, 1000);
+    setTimeout(syncOrderTypography, 2500);
+    updateOrderControl();
   }
 
   function normalizeSymbol(raw) {
-    const text = String(raw || "").trim().toUpperCase();
-    const match = text.match(/[A-Z0-9]+_?USDT|[A-Z0-9]+/);
-    if (!match) return "";
-    return match[0].replace(/[^A-Z0-9_]/g, "");
+    const compact = String(raw || "").trim().replace(/\s+/g, "").replace(/[|:()[\]{}<>]/g, "");
+    const upper = compact.toUpperCase();
+    if (upper && /USDT$/.test(upper.replace(/_/g, ""))) return upper;
+    const latinBase = upper.replace(/[^A-Z0-9]/g, "");
+    return latinBase ? `${latinBase}USDT` : "";
   }
 
   function normalizeExchange(raw) {
-    const key = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9.]/g, "");
+    const key = String(raw || "")
+      .replace(/[↑↓]/g, "")
+      .replace(/\s+/g, "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z.]/g, "");
     return EXCHANGE_MAP[key] || "";
   }
 
@@ -600,19 +779,10 @@
 
   function normalizeAutoExchange(raw) {
     const key = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^GATEIO$/, "GATE");
-    if (key === "GATE.IO") return "gateio";
-    if (key === "GATE") return "gateio";
+    if (key === "GATE.IO") return "gate";
+    if (key === "GATE") return "gate";
     if (key === "BING") return "bingx";
-    if (key === "ASTERDEX") return "asterdex";
-    if (key === "ASTER") return "asterdex";
-    if (key === "ASTER.DEX") return "asterdex";
     return key.toLowerCase();
-  }
-
-  function getFastTradeExchangeVariants(exchange) {
-    if (exchange === "gateio") return ["gateio", "gate"];
-    if (exchange === "gate") return ["gate", "gateio"];
-    return [exchange];
   }
 
   function clearFastTradeUrl() {
@@ -631,7 +801,6 @@
   async function runFastTradeUrl() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("ft_auto") !== "1" && params.get("fast_auto") !== "1") return;
-
     const setupKey = window.location.search;
     if (window.__spreadRadarFastTradeUrlKey === setupKey) return;
     const consumedKey = "spreadradar_fast_trade_url_consumed_" + setupKey;
@@ -645,8 +814,7 @@
     const side = String(params.get("side") || "LONG").trim().toUpperCase() === "SHORT" ? "SHORT" : "LONG";
     const exch1Name = normalizeAutoExchange(params.get("ex1") || params.get("exchange1") || params.get("long"));
     const exch2Name = normalizeAutoExchange(params.get("ex2") || params.get("exchange2") || params.get("short"));
-    const urlSignalSpread = Number(String(params.get("signalSpread") || params.get("spread") || params.get("os") || "0").replace(",", "."));
-    const signalSpread = getFastTradeSignalSpread(urlSignalSpread);
+    const signalSpread = Number(String(params.get("signalSpread") || params.get("spread") || params.get("os") || "0").replace(",", "."));
 
     if (!coin || !exch1Name || !exch2Name) {
       clearFastTradeUrl();
@@ -663,60 +831,33 @@
     }
 
     try {
-      const postFastStart = async (ex1, ex2) => {
-        const response = await fetch(`${endPoint}/trading/fastStart`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-          },
-          body: JSON.stringify({
-            coin,
-            exch1Name: ex1,
-            exch2Name: ex2,
-            side,
-            signalSpread: Number.isFinite(signalSpread) ? signalSpread : 0
-          })
-        });
-        const data = await response.json().catch(() => null);
-        return { response, data, ex1, ex2 };
-      };
-
-      let result = await postFastStart(exch1Name, exch2Name);
-      const firstError = result.data?.msg || `Fast Trade failed: HTTP ${result.response.status}`;
-      const shouldRetryGate = (!result.response.ok || result.data?.res === "Error")
-        && /calculate\s+order\s+size/i.test(firstError)
-        && [exch1Name, exch2Name].some(ex => ex === "gateio" || ex === "gate");
-
-      if (shouldRetryGate) {
-        const ex1Variants = getFastTradeExchangeVariants(exch1Name);
-        const ex2Variants = getFastTradeExchangeVariants(exch2Name);
-        retry:
-        for (const ex1 of ex1Variants) {
-          for (const ex2 of ex2Variants) {
-            if (ex1 === exch1Name && ex2 === exch2Name) continue;
-            result = await postFastStart(ex1, ex2);
-            if (result.response.ok && result.data?.res !== "Error") break retry;
-          }
-        }
-      }
-
-      if (!result.response.ok || result.data?.res === "Error") {
+      const response = await fetch(`${endPoint}/trading/fastStart`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          coin,
+          exch1Name,
+          exch2Name,
+          side,
+          signalSpread: Number.isFinite(signalSpread) ? signalSpread : 0
+        })
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.res === "Error") {
         clearFastTradeUrl();
-        alert(result.data?.msg || firstError);
+        alert(data?.msg || `Fast Trade failed: HTTP ${response.status}`);
         return;
       }
-
       clearFastTradeUrl();
-
-      // ArbitTerminal can create the card on the backend, but the current SPA view
-      // may not redraw the active trading cards until a full page refresh.
-      // A hard reload after a successful fastStart is more reliable than trying
-      // to click a random Refresh button in the UI. The URL is cleaned first,
-      // so ft_auto will not run again after reload.
       setTimeout(() => {
-        window.location.reload();
-      }, 900);
+        const refresh = Array.from(document.querySelectorAll("button"))
+          .find(btn => !btn.closest(".trade-card") && btn.textContent.trim().toLowerCase().includes("refresh"));
+        if (refresh) refresh.click();
+        else location.reload();
+      }, 500);
     } catch (err) {
       console.error("SpreadRadar Fast Trade URL failed:", err);
       clearFastTradeUrl();
@@ -724,32 +865,21 @@
     }
   }
 
-  function cleanInlineLiveText(host) {
-    if (!host) return "";
-    const clone = host.cloneNode(true);
-    clone.querySelectorAll?.(".spreadradar-inline-live").forEach(node => node.remove());
-    return String(clone.textContent || "").trim();
-  }
-
-  function getSignalTickerHost(card) {
-    return card?.querySelector?.('[data-help="signal.symbol"], td.symbol, .header .symbol, .symbol') || null;
-  }
-
   function getSymbolFromCard(card) {
-    const signalSymbol = cleanInlineLiveText(getSignalTickerHost(card));
+    const signalSymbol = card?.querySelector?.('[data-help="signal.symbol"], td.symbol, .header .symbol, .symbol')?.textContent;
     const tradeSymbol = card?.querySelector?.(".trade-details strong")?.textContent;
-    const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ");
+    const text = String(card?.innerText || card?.textContent || "");
     const fallback = (text.match(/([^\s|:()[\]{}<>]+_?USDT)/i) || [])[1] || "";
     return normalizeSymbol(signalSymbol || tradeSymbol || fallback);
   }
 
   function getRouteExchanges(card) {
-    let long = normalizeExchange(card?.querySelector?.(".arbitrage-info .long, td.long, .long")?.textContent || "");
-    let short = normalizeExchange(card?.querySelector?.(".arbitrage-info .short, td.short, .short")?.textContent || "");
+    let long = normalizeExchange(card?.querySelector?.(".arbitrage-info .long")?.textContent || "");
+    let short = normalizeExchange(card?.querySelector?.(".arbitrage-info .short")?.textContent || "");
     const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ").trim();
 
     if (!long || !short) {
-      const arrowMatches = Array.from(text.matchAll(new RegExp(`\\b(${EXCHANGE_PATTERN})\\b\\s*([↑↓])`, "gi")));
+      const arrowMatches = Array.from(text.matchAll(/\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|BITGET)\b\s*([↑↓])/gi));
       for (const match of arrowMatches) {
         const exchange = normalizeExchange(match[1]);
         if (!exchange) continue;
@@ -760,7 +890,7 @@
 
     if (!long || !short) {
       const found = [];
-      const exchangeRegex = new RegExp(`\\b(${EXCHANGE_PATTERN})\\b`, "gi");
+      const exchangeRegex = /\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|BITGET)\b/gi;
       for (const match of text.matchAll(exchangeRegex)) {
         const exchange = normalizeExchange(match[1]);
         if (exchange && !found.includes(exchange)) found.push(exchange);
@@ -894,10 +1024,9 @@
 
   function renderSpreadChart(points) {
     const values = (Array.isArray(points) ? points : [])
-      .filter(point => point?.entry_order_depth_ok !== false)
       .slice(-10)
-      .map(point => Number(point?.entry_spread_pct))
-      .filter(value => Number.isFinite(value));
+      .map((point) => Number(point?.entry_spread_pct))
+      .filter((value) => Number.isFinite(value));
     if (values.length < 2) return "";
 
     const width = 220;
@@ -953,13 +1082,8 @@
 
     try {
       const orderUsdt = getLiveOrderUsdt();
-      const params = new URLSearchParams({
-        route_key: liveState.routeKey,
-        limit: "10",
-        use_raw_depth: "1"
-      });
+      const params = new URLSearchParams({ route_key: liveState.routeKey, limit: "10" });
       if (liveState.orderQtyBase) params.set("order_qty_base", String(liveState.orderQtyBase));
-
       const response = await fetch(`${LIVE_SPREAD_URL}?${params}`, {
         credentials: "include",
         signal: liveState.controller.signal
@@ -972,14 +1096,12 @@
         }
         throw new Error(`HTTP ${response.status}`);
       }
-
       const points = Array.isArray(data?.points) ? data.points : [];
       const last = points[points.length - 1];
       if (!last) {
         renderLiveTip('<div class="sr-live-muted">No live data</div>');
         return;
       }
-
       if (!liveState.orderQtyBase) {
         const longAsk = Number(last.long_ask);
         if (Number.isFinite(longAsk) && longAsk > 0) {
@@ -990,18 +1112,13 @@
       }
 
       const orderLabel = formatUsdt(last.order_notional_usdt || orderUsdt);
-      const isDepthNo = last.entry_order_depth_ok === false;
-      const depthText = isDepthNo
+      const depthText = last.entry_order_depth_ok === false
         ? '<span class="sr-live-title">DEPTH:</span> <span class="sr-live-depth-no">NO</span>'
         : '<span class="sr-live-title">DEPTH:</span> <span class="sr-live-depth-ok">OK</span>';
       const openClass = Number(last.entry_spread_pct) < 0 ? "sr-live-warning" : "sr-live-value";
-      const openValueHtml = isDepthNo
-        ? ""
-        : `<span class="${openClass} sr-live-spread">${formatPct(last.entry_spread_pct)}</span>`;
       const chartHtml = renderSpreadChart(points);
-
       renderLiveTip(`
-        <div class="sr-live-row"><span><span class="sr-live-title">OPEN:</span> <span class="sr-live-money">${orderLabel}</span></span>${openValueHtml}</div>
+        <div class="sr-live-row"><span><span class="sr-live-title">OPEN:</span> <span class="sr-live-money">${orderLabel}</span></span><span class="${openClass} sr-live-spread">${formatPct(last.entry_spread_pct)}</span></div>
         <div class="sr-live-row"><span class="sr-live-label">${depthText}</span><span class="sr-live-muted">${formatAge(last.ts_ms)}</span></div>
         ${chartHtml}
       `);
@@ -1010,233 +1127,6 @@
     } finally {
       liveState.inFlight = false;
     }
-  }
-
-
-  function isSignalPanelActiveForInlineLive() {
-    if (document.body?.classList?.contains("signals-hidden") || document.body?.classList?.contains("mix-at-hide-main-ui")) return false;
-
-    const panel = document.querySelector(".signals-list");
-    if (!(panel instanceof HTMLElement)) return false;
-    const rect = panel.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    if (!panel.querySelector(".signal-card")) return false;
-
-    const style = window.getComputedStyle(panel);
-    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
-
-    // MIX right-side Signal panel.
-    if (document.body?.classList?.contains("mix-at-signal-controls-on")) return true;
-
-    // Standalone/right panel and normal ArbitTerminal grid/list position.
-    // We only require that .signals-list is visible and contains visible signal cards.
-    // getInlineSignalCards() below will still limit processing to the first 4 visible cards.
-    return true;
-  }
-
-  function isVisibleSignalCardInPanel(card, panel) {
-    if (!(card instanceof HTMLElement) || !card.isConnected) return false;
-    if (card.dataset.mixAtHidden === "true" || card.dataset.spreadradarHidden === "true") return false;
-
-    const style = getComputedStyle(card);
-    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
-
-    const rect = card.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-
-    const panelRect = panel?.getBoundingClientRect?.();
-    if (panelRect && panelRect.width > 0 && panelRect.height > 0) {
-      return rect.bottom > panelRect.top && rect.top < panelRect.bottom && rect.right > panelRect.left && rect.left < panelRect.right;
-    }
-
-    return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
-  }
-
-  function getInlineSignalCards() {
-    if (!isSignalPanelActiveForInlineLive()) return [];
-    const panel = document.querySelector(".signals-list");
-    if (!(panel instanceof HTMLElement)) return [];
-
-    return Array.from(panel.querySelectorAll(".signal-card"))
-      .filter(card => isVisibleSignalCardInPanel(card, panel))
-      .slice(0, INLINE_LIVE_LIMIT);
-  }
-
-  function getSignalInlineLiveHost(card) {
-    if (!card) return null;
-
-    const existingHost = card.querySelector?.("table.exchange-info td.spreadradar-inline-live-host");
-    if (existingHost) return existingHost;
-
-    // Actual ArbitTerminal signal-card structure currently has no data-help on this row:
-    // <table class="exchange-info"><tbody><tr><td></td><td class="long">...</td><td class="short">...</td></tr>...</tbody></table>
-    const firstCell = card.querySelector?.("table.exchange-info tbody tr:first-child > td:first-child, table.exchange-info tr:first-child > td:first-child");
-    if (firstCell instanceof HTMLElement && !firstCell.classList.contains("long") && !firstCell.classList.contains("short")) {
-      return firstCell;
-    }
-
-    const exchangeRow = card.querySelector?.('table.exchange-info tr[data-help="signal.exchanges"]');
-    const markedFirstCell = exchangeRow?.querySelector?.(":scope > td:first-child, :scope > th:first-child");
-    if (markedFirstCell instanceof HTMLElement && !markedFirstCell.classList.contains("long") && !markedFirstCell.classList.contains("short")) {
-      return markedFirstCell;
-    }
-
-    const row = card.querySelector?.("table.exchange-info tbody tr, table.exchange-info tr");
-    const cells = Array.from(row?.children || []).filter(el => el instanceof HTMLElement && /^(TD|TH)$/i.test(el.tagName));
-    const cleanCellText = (el) => cleanInlineLiveText(el);
-    const emptyCell = cells.find(el => !el.classList.contains("short") && !el.classList.contains("long") && cleanCellText(el) === "");
-
-    return emptyCell || getSignalTickerHost(card);
-  }
-
-  function ensureInlineLiveNode(card) {
-    const host = getSignalInlineLiveHost(card);
-    if (!host) return null;
-    host.classList.add("spreadradar-inline-live-host");
-    let node = Array.from(host.children || []).find(el => el.classList?.contains("spreadradar-inline-live"));
-    if (!node) {
-      node = document.createElement("span");
-      node.className = "spreadradar-inline-live is-muted";
-      host.appendChild(node);
-    }
-    return node;
-  }
-
-  function setInlineLiveNode(card, text, className, routeKey = "") {
-    const node = ensureInlineLiveNode(card);
-    if (!node) return;
-    node.className = `spreadradar-inline-live ${className || "is-muted"}`;
-    node.textContent = text;
-    node.dataset.spreadradarInlineLiveUpdatedAt = String(Date.now());
-    if (routeKey) node.dataset.spreadradarInlineLiveRouteKey = routeKey;
-  }
-
-  function removeInlineLiveNode(card) {
-    const host = getSignalInlineLiveHost(card);
-    if (!host) return;
-    host.querySelectorAll?.(".spreadradar-inline-live").forEach(node => node.remove());
-    host.classList.remove("spreadradar-inline-live-host");
-  }
-
-  function clearInlineLiveNodes(exceptCards = new Set()) {
-    document.querySelectorAll(".spreadradar-inline-live").forEach(node => {
-      const card = node.closest?.(".signal-card");
-      if (card && exceptCards.has(card)) return;
-      const host = node.parentElement;
-      node.remove();
-      host?.classList?.remove("spreadradar-inline-live-host");
-    });
-  }
-
-  function getCachedInlineLive(routeKey) {
-    const item = inlineLiveState.lastByRoute?.[routeKey];
-    if (!item || !Number.isFinite(Number(item.expiresAt)) || Date.now() > Number(item.expiresAt)) return null;
-    return item;
-  }
-
-  function cacheInlineLive(routeKey, text, className) {
-    if (!routeKey) return;
-    inlineLiveState.lastByRoute[routeKey] = {
-      text,
-      className,
-      expiresAt: Date.now() + INLINE_LIVE_TTL_MS
-    };
-  }
-
-  async function fetchInlineLiveSpread(routeKey) {
-    const orderUsdt = getLiveOrderUsdt();
-    const qtyKey = `${routeKey}|${orderUsdt}`;
-    let orderQtyBase = Number(inlineLiveState.orderQtyByRoute?.[qtyKey]);
-    if (!Number.isFinite(orderQtyBase) || orderQtyBase <= 0) orderQtyBase = 0;
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const params = new URLSearchParams({
-        route_key: routeKey,
-        limit: "1",
-        use_raw_depth: "1"
-      });
-      if (orderQtyBase > 0) params.set("order_qty_base", String(orderQtyBase));
-
-      const response = await fetch(`${LIVE_SPREAD_URL}?${params}`, { credentials: "include" });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
-
-      const points = Array.isArray(data?.points) ? data.points : [];
-      const last = points[points.length - 1];
-      if (!last) return { status: "empty" };
-
-      if (orderQtyBase <= 0) {
-        const longAsk = Number(last.long_ask);
-        if (Number.isFinite(longAsk) && longAsk > 0) {
-          orderQtyBase = orderUsdt / longAsk;
-          inlineLiveState.orderQtyByRoute[qtyKey] = orderQtyBase;
-          continue;
-        }
-      }
-
-      if (last.entry_order_depth_ok === false) return { status: "depth_no" };
-      const spread = Number(last.entry_spread_pct);
-      if (!Number.isFinite(spread)) return { status: "empty" };
-      return { status: "ok", spread };
-    }
-
-    return { status: "empty" };
-  }
-
-  async function updateInlineLiveSpreads() {
-    if (inlineLiveState.inFlight) return;
-    const cards = getInlineSignalCards();
-    const cardSet = new Set(cards);
-    clearInlineLiveNodes(cardSet);
-    if (!cards.length) return;
-
-    inlineLiveState.inFlight = true;
-    try {
-      for (const card of cards) {
-        const routeKey = getRouteKey(card);
-        if (!routeKey) {
-          removeInlineLiveNode(card);
-          continue;
-        }
-
-        const cached = getCachedInlineLive(routeKey);
-        if (cached) setInlineLiveNode(card, cached.text, cached.className, routeKey);
-
-        try {
-          const result = await fetchInlineLiveSpread(routeKey);
-          if (result.status !== "ok") {
-            const latestCached = getCachedInlineLive(routeKey);
-            if (latestCached) setInlineLiveNode(card, latestCached.text, latestCached.className, routeKey);
-            else removeInlineLiveNode(card);
-            continue;
-          }
-
-          const cls = result.spread >= 0.18 ? "is-positive" : (result.spread >= 0 ? "is-warning" : "is-negative");
-          const text = formatPct(result.spread);
-          cacheInlineLive(routeKey, text, cls);
-          setInlineLiveNode(card, text, cls, routeKey);
-        } catch (_) {
-          const latestCached = getCachedInlineLive(routeKey);
-          if (latestCached) setInlineLiveNode(card, latestCached.text, latestCached.className, routeKey);
-          else removeInlineLiveNode(card);
-        }
-      }
-    } finally {
-      inlineLiveState.inFlight = false;
-    }
-  }
-
-  function startInlineLiveSpreads() {
-    if (inlineLiveState.timer) return;
-    updateInlineLiveSpreads();
-    inlineLiveState.timer = setInterval(updateInlineLiveSpreads, INLINE_LIVE_POLL_MS);
-  }
-
-  function stopInlineLiveSpreads() {
-    if (inlineLiveState.timer) clearInterval(inlineLiveState.timer);
-    inlineLiveState.timer = 0;
-    inlineLiveState.inFlight = false;
-    clearInlineLiveNodes(new Set());
   }
 
   function startLiveHover(tickerEl) {
@@ -1279,15 +1169,60 @@
     openSpreadRadar(card);
   }
 
+  function isUtilityPage() {
+    const path = location.pathname.toLowerCase();
+    return /history|trend|chart|leaderboard|cooperation|settings|login/.test(path)
+      || !!document.querySelector(".chart-fullscreen-btn:fullscreen");
+  }
+
+  function hideSignalCard(card) {
+    if (!card) return;
+    card.dataset.spreadradarHidden = "true";
+    card.style.setProperty("display", "none", "important");
+    if (liveState.card === card) stopLiveHover();
+  }
+
+  function syncSignalPanel() {
+    if (isUtilityPage()) {
+      document.body.classList.remove("spreadradar-signals-panel-on");
+      document.querySelectorAll(".spreadradar-signal-close").forEach(btn => btn.remove());
+      return;
+    }
+
+    const list = document.querySelector(".signals-list");
+    document.body.classList.toggle("spreadradar-signals-panel-on", !!list && window.innerWidth > 1200);
+    document.querySelectorAll(".signals-list .signal-card:not([data-spreadradar-close])").forEach(card => {
+      card.dataset.spreadradarClose = "true";
+      if (getComputedStyle(card).position === "static") card.style.position = "relative";
+      const close = document.createElement("button");
+      close.type = "button";
+      close.className = "spreadradar-signal-close";
+      close.textContent = "×";
+      close.title = "Hide signal";
+      const stopCloseEvent = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+      };
+      close.addEventListener("pointerdown", stopCloseEvent, true);
+      close.addEventListener("mousedown", stopCloseEvent, true);
+      close.addEventListener("click", event => {
+        stopCloseEvent(event);
+        hideSignalCard(card);
+      }, true);
+      card.appendChild(close);
+    });
+  }
+
   injectStyle();
   ensureOrderControl();
-  startInlineLiveSpreads();
   runFastTradeUrl();
-
+  syncSignalPanel();
+  setInterval(syncSignalPanel, 1000);
   document.addEventListener("DOMContentLoaded", ensureOrderControl, { once: true });
   document.addEventListener("click", onClick, true);
   document.addEventListener("mouseover", onHoverIn, true);
   document.addEventListener("mouseout", onHoverOut, true);
-  window.addEventListener("resize", () => applyOrderPosition(document.getElementById(ORDER_CONTROL_ID), getStoredOrderPosition()), { passive: true });
-  window.addEventListener("beforeunload", stopInlineLiveSpreads, { once: true });
+  window.addEventListener("resize", syncSignalPanel, { passive: true });
+
 })();
