@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AT Plugins SpreadRadar edition
 // @namespace    https://www.arbitterminal.online/
-// @version      1.09.92-header-update
+// @version      1.09.92-bitget-update
 // @description  AT Plugins SpreadRadar edition: панель модулів, звуки, PNL, баланси, кнопки полів, автозапуск, лідерборд і UI-помічники
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
