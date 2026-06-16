@@ -1,11 +1,10 @@
 // ==UserScript==
 // @name         AT Plugins SpreadRadar edition
 // @namespace    https://www.arbitterminal.online/
-// @version      1.09.90-signal-panel-v1.15
+// @version      1.09.92-header-update
 // @description  AT Plugins SpreadRadar edition: панель модулів, звуки, PNL, баланси, кнопки полів, автозапуск, лідерборд і UI-помічники
 // @match        https://www.arbitterminal.online/*
 // @match        https://arbitterminal.online/*
-// @match        https://signalostest.arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
 // @connect      arbitterminal.github.io
 // @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/AT-Plugins-SpreadRadar-edition.txt
@@ -50,7 +49,7 @@
 })();
 
 window.__MIX_ULTIMATE_CONFIG__ = window.__MIX_ULTIMATE_CONFIG__ || {};
-window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.89";
+window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.92-header-update";
 window.__MIX_ULTIMATE_CONFIG__.FEES = { BINANCE: 0.05, BYBIT: 0.055, BINGX: 0.05, KUCOIN: 0.06, BITGET: 0.1, GATEIO: 0.05, MEXC: 0.06, ASTER: 0.04, ASTERDEX: 0.04 };
 
 try {
@@ -60,6 +59,32 @@ try {
     configurable: true
   });
 } catch (_) {}
+
+
+/* ===== GLOBAL: ArbitTerminal notifications must stay above all plugin layers ===== */
+(function mixEnsureArbitterminalNotificationsTopLayer() {
+  "use strict";
+  const STYLE_ID = "mix-arbitterminal-notifications-top-layer-v10991";
+  function inject() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      .notifications-wrapper{
+        position:fixed!important;
+        z-index:2147483647!important;
+      }
+      .notifications-wrapper .notifications-header,
+      .notifications-wrapper .notifications-container,
+      .notifications-wrapper .notification{
+        z-index:2147483647!important;
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
+  if (document.head || document.documentElement) inject();
+  else document.addEventListener("DOMContentLoaded", inject, { once: true });
+})();
 
 /* ===== МЕНЕДЖЕР МОДУЛІВ MIX ===== */
 
@@ -127,7 +152,7 @@ try {
 
   const I18N = {
     en: {
-      panelTitle: "MIX Plugin Pack v1.09.88",
+      panelTitle: "MIX Plugin Pack v1.09.91",
       close: "Close",
       apply: "Apply changes",
       instant: "instant",
@@ -182,7 +207,7 @@ try {
       }
     },
     ua: {
-      panelTitle: "Збірка плагінів v1.09.88",
+      panelTitle: "Збірка плагінів v1.09.91",
       close: "Закрити",
       apply: "Застосувати зміни",
       instant: "одразу",
@@ -237,7 +262,7 @@ try {
       }
     },
     ru: {
-      panelTitle: "Сборка плагинов v1.09.88",
+      panelTitle: "Сборка плагинов v1.09.91",
       close: "Закрыть",
       apply: "Применить изменения",
       instant: "сразу",
@@ -2639,6 +2664,7 @@ try {
     "GATE.IO": "gate",
     BINGX: "bingx",
     BING: "bingx",
+    BITGET: "bitget",
     ASTERDEX: "aster",
     ASTER: "aster",
     "ASTER.DEX": "aster"
@@ -2817,7 +2843,7 @@ try {
     const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ").trim();
     const symbolText = cleanSignalTickerText(card?.querySelector?.('[data-help="signal.symbol"], td.symbol, .header .symbol, .symbol'));
     const ticker = normalizeSymbol(symbolText || (text.match(/([^\s|:()[\]{}<>]+_?USDT)/i) || [])[1] || "", null);
-    const matches = Array.from(text.matchAll(/\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|ASTERDEX|ASTER\.DEX|ASTER)\b\s*([↑↓])/gi));
+    const matches = Array.from(text.matchAll(/\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|BITGET|ASTERDEX|ASTER\.DEX|ASTER)\b\s*([↑↓])/gi));
     let long = "";
     let short = "";
 
@@ -4804,7 +4830,7 @@ try {
       "#mix-at-controls-container button{font-family:inherit}",
       "#mix-at-controls-container{top:5px!important;gap:8px!important;align-items:center!important}",
       "#mix-at-controls-container button{margin-right:0!important;flex:0 0 auto!important}",
-      ".notifications-wrapper{z-index:100500!important}",
+      ".notifications-wrapper{position:fixed!important;z-index:2147483647!important}",
       ".mix-at-wallets-hidden-box{position:absolute!important;top:-9999px!important;left:-9999px!important;opacity:0!important;pointer-events:none!important;height:0!important;overflow:hidden!important}",
       "body.signals-reserved{padding-right:0!important}",
       "body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) main,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .page-content,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .content,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .main-content,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) #root>div,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .trade-cards-group,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .filter-form,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .trade-card,body.signals-reserved:not(.signals-hidden):not(.mix-at-hide-main-ui) .trade-card-wrapper{margin-right:0!important;max-width:var(--mix-page-content-max, calc(var(--mix-total-pnl-left, 100vw) + 14px))!important}",
