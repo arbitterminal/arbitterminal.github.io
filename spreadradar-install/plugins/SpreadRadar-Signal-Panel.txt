@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         ArbitTerminal: SpreadRadar Signal Panel Layout
+// @name         Signal Panel Right Layout
 // @namespace    https://www.arbitterminal.online/
 // @version      1.22-close-first-card-stable
 // @description  Окремий модуль Right Panel Layout для signal-card
