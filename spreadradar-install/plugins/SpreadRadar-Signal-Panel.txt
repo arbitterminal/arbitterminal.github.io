@@ -1,9 +1,10 @@
 // ==UserScript==
-// @name         Signal Panel Right Layout
+// @name         Signal Panel Right Layout for AT
 // @namespace    https://www.arbitterminal.online/
-// @version      1.24-fullscreen-fix
-// @description  Окремий модуль Right Panel Layout для signal-card
+// @version      1.21-fullscreen-chart-fix
+// @description  Окремий модуль стилізації signal panel, utility-page логіки і хрестика закриття signal-card, сумісний зі SpreadRadar Links
 // @match        https://www.arbitterminal.online/*
+// @match        https://arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
 // @grant        none
 // @connect      arbitterminal.github.io
@@ -17,17 +18,24 @@
 
   const STYLE_ID = "spreadradar-signal-panel-layout-style";
   const BODY_CLASS = "spreadradar-signals-panel-on";
-  const CHART_FS_SUSPENDED_CLASS = "spreadradar-signals-panel-chart-fs-suspended";
+  const RESERVED_CLASS = "signals-reserved";
   const SIGNAL_LIST_SELECTOR = ".signals-list";
+  const VIRTUOSO_SCROLLER_SELECTOR = '[data-virtuoso-scroller="true"]';
+  const VIRTUOSO_PANEL_CLASS = "spreadradar-virtuoso-panel-root-v113";
+  const VIRTUOSO_LIST_CLASS = "spreadradar-signals-list-virtuoso-v113";
+  const HIDDEN_CLASS = "spreadradar-signal-card-hidden-v113";
   const DESKTOP_MIN_WIDTH = 1200;
-  const SYNC_INTERVAL_MS = 700;
+  const SYNC_INTERVAL_MS = 900;
+  const MUTATION_DEBOUNCE_MS = 120;
   const SCROLLBAR_WIDTH_VAR = "--spreadradar-v-scrollbar-width";
+  const CHART_FS_BUTTON_SELECTOR = ".chart-fs-btn";
 
   let lastPath = location.pathname;
   let lastSearch = location.search;
   let lastPanelState = null;
-  let chartFsSuspended = false;
   let observer = null;
+  let syncTimer = 0;
+  let chartFsSuppressed = false;
 
   function injectStyle() {
     let style = document.getElementById(STYLE_ID);
@@ -56,11 +64,11 @@
         max-height:none!important;
       }
 
-      body.${BODY_CLASS} .signals-list{
+      body.${BODY_CLASS} .signals-list:not(.${VIRTUOSO_LIST_CLASS}){
         position:fixed!important;
         right:6px!important;
-        top:49px!important;
-        bottom:22px!important;
+        top:47px!important;
+        bottom:38px!important;
         width:450px!important;
         max-height:none!important;
         overflow-y:auto!important;
@@ -71,6 +79,54 @@
         box-sizing:border-box!important;
         display:block!important;
       }
+
+      body.${BODY_CLASS} .${VIRTUOSO_PANEL_CLASS}{
+        position:fixed!important;
+        right:6px!important;
+        top:47px!important;
+        bottom:38px!important;
+        width:450px!important;
+        max-height:none!important;
+        height:auto!important;
+        overflow-y:auto!important;
+        overflow-x:hidden!important;
+        background:transparent!important;
+        z-index:100000!important;
+        padding:6px 8px 12px 6px!important;
+        box-sizing:border-box!important;
+        display:block!important;
+        transform:none!important;
+        contain:none!important;
+      }
+      body.${BODY_CLASS} .${VIRTUOSO_PANEL_CLASS} > div{
+        width:100%!important;
+        min-width:0!important;
+        box-sizing:border-box!important;
+      }
+      body.${BODY_CLASS} .${VIRTUOSO_PANEL_CLASS} .${VIRTUOSO_LIST_CLASS}{
+        position:static!important;
+        right:auto!important;
+        top:auto!important;
+        bottom:auto!important;
+        width:100%!important;
+        max-width:none!important;
+        height:auto!important;
+        min-height:0!important;
+        max-height:none!important;
+        overflow:visible!important;
+        background:transparent!important;
+        padding:0!important;
+        box-sizing:border-box!important;
+        display:block!important;
+        transform:none!important;
+      }
+      body.${BODY_CLASS} .${VIRTUOSO_PANEL_CLASS} .virtuoso-grid-item{
+        width:100%!important;
+        min-width:0!important;
+        box-sizing:border-box!important;
+        overflow:visible!important;
+      }
+
       body.${BODY_CLASS} .signals-list .signal-card{
         width:100%!important;
         max-width:none!important;
@@ -220,12 +276,28 @@
       .spreadradar-signal-close:hover{
         opacity:1!important;
       }
-      .signals-list .signal-card[data-spreadradar-hidden="true"]{
+      .signals-list .signal-card[data-spreadradar-hidden="true"],
+      .signals-list .signal-card.${HIDDEN_CLASS}{
         display:none!important;
       }
 
+
+      /* Keep native ArbitTerminal notifications above Signal Panel, wallet bar, popups and SpreadRadar UI layers. */
+      .notifications-wrapper{
+        position:fixed!important;
+        z-index:2147483647!important;
+        isolation:isolate!important;
+        pointer-events:auto!important;
+      }
+      .notifications-wrapper .notifications-header,
+      .notifications-wrapper .notifications-container,
+      .notifications-wrapper .notification{
+        z-index:2147483647!important;
+        pointer-events:auto!important;
+      }
+
       body.${BODY_CLASS} .wallet-bar.wb-desktop,
-      body.signals-reserved .wallet-bar.wb-desktop{
+      body.${RESERVED_CLASS} .wallet-bar.wb-desktop{
         position:fixed!important;
         left:0!important;
         right:auto!important;
@@ -239,37 +311,38 @@
         z-index:100004!important;
       }
       body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-chips,
-      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-chips{
+      body.${RESERVED_CLASS} .wallet-bar.wb-desktop .wallet-bar-chips{
         flex:1 1 auto!important;
         min-width:0!important;
         max-width:none!important;
       }
       body.${BODY_CLASS} .wallet-bar.wb-desktop .wallet-bar-total,
-      body.signals-reserved .wallet-bar.wb-desktop .wallet-bar-total{
+      body.${RESERVED_CLASS} .wallet-bar.wb-desktop .wallet-bar-total{
         flex:0 0 auto!important;
       }
 
       body.${BODY_CLASS} .wb-desktop-popup.wb-desktop,
       body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
-      body.signals-reserved .wb-desktop-popup.wb-desktop,
-      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
+      body.${RESERVED_CLASS} .wb-desktop-popup.wb-desktop,
+      body.${RESERVED_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
         position:fixed!important;
         z-index:100005!important;
         transform:none!important;
       }
       body.${BODY_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open,
-      body.signals-reserved .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
+      body.${RESERVED_CLASS} .wb-desktop-popup.wb-desktop.wb-desktop-popup-open{
         pointer-events:auto!important;
       }
 
-      body.${CHART_FS_SUSPENDED_CLASS} .signals-list{
-        display:none!important;
-      }
-
       @media(max-width:1200px){
-        body.${BODY_CLASS} .signals-list{
+        body.${BODY_CLASS} .signals-list:not(.${VIRTUOSO_LIST_CLASS}),
+        body.${BODY_CLASS} .${VIRTUOSO_PANEL_CLASS}{
           position:static!important;
           width:auto!important;
+          top:auto!important;
+          right:auto!important;
+          bottom:auto!important;
+          padding:0!important;
         }
         body.${BODY_CLASS} main,
         body.${BODY_CLASS} .page-content,
@@ -290,49 +363,111 @@
   }
 
 
-  function getChartFsButtonMode(button) {
-    const text = String(button?.textContent || "").trim();
-    if (text === "⛶") return "open";
-    if (text === "✕" || text === "×" || text.toLowerCase() === "x") return "close";
-    return "unknown";
+  function isVisibleElement(el) {
+    if (!(el instanceof Element) || !el.isConnected) return false;
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
   }
 
-  function setChartFsSuspended(value) {
-    chartFsSuspended = Boolean(value);
-    if (document.body) {
-      document.body.classList.toggle(CHART_FS_SUSPENDED_CLASS, chartFsSuspended);
+  function looksLikeFullscreenChartNode(node) {
+    if (!(node instanceof Element)) return false;
+    const rect = node.getBoundingClientRect();
+    if (rect.width < window.innerWidth * 0.68 || rect.height < window.innerHeight * 0.58) return false;
+
+    const style = getComputedStyle(node);
+    const zIndex = Number.parseInt(style.zIndex || "0", 10) || 0;
+    const classAndId = `${node.className || ""} ${node.id || ""}`;
+    const nameHint = /full.?screen|fullscreen|chart|history|modal|overlay|dialog|popup/i.test(classAndId);
+    const layerHint = /fixed|absolute/i.test(style.position) || zIndex >= 1000;
+
+    return nameHint && layerHint;
+  }
+
+  function isChartFsCloseButton(button) {
+    if (!(button instanceof Element)) return false;
+    const text = (button.textContent || "").trim();
+    const aria = `${button.getAttribute("aria-label") || ""} ${button.getAttribute("title") || ""}`.trim();
+    return text === "✕" || text === "×" || /close|закр|закры|hide/i.test(aria);
+  }
+
+  function hasChartFullscreenDomHints() {
+    if (document.fullscreenElement) return true;
+
+    const buttons = Array.from(document.querySelectorAll(CHART_FS_BUTTON_SELECTOR)).filter(isVisibleElement);
+    if (buttons.some(isChartFsCloseButton)) return true;
+
+    for (const button of buttons) {
+      let node = button;
+      for (let i = 0; i < 10 && node && node !== document.body; i += 1) {
+        if (looksLikeFullscreenChartNode(node)) return true;
+        node = node.parentElement;
+      }
+    }
+
+    const largeNodes = Array.from(document.querySelectorAll('[class*="chart"], [class*="Chart"], [class*="fullscreen"], [class*="Fullscreen"], [class*="modal"], [class*="Modal"], [class*="overlay"], [class*="Overlay"], [role="dialog"]'));
+    return largeNodes.some(looksLikeFullscreenChartNode);
+  }
+
+  function reconcileChartFullscreenState() {
+    if (chartFsSuppressed && !hasChartFullscreenDomHints()) {
+      chartFsSuppressed = false;
     }
   }
 
-  function handleChartFsButtonClick(button) {
-    const mode = getChartFsButtonMode(button);
-
-    if (mode === "open") {
-      setChartFsSuspended(true);
-      syncSignalPanel();
-      return;
-    }
-
-    if (mode === "close") {
-      window.setTimeout(() => {
-        setChartFsSuspended(false);
-        syncSignalPanel();
-      }, 150);
-    }
+  function isChartFullscreenMode() {
+    reconcileChartFullscreenState();
+    return document.fullscreenElement || chartFsSuppressed || hasChartFullscreenDomHints();
   }
 
-  function watchChartFullscreenButtons() {
-    document.addEventListener("click", event => {
-      const button = event.target?.closest?.("button.chart-fs-btn, .chart-fs-btn");
-      if (!button) return;
-      handleChartFsButtonClick(button);
-    }, true);
+  function isUtilityPage() {
+    if (isChartFullscreenMode()) return true;
+    const path = location.pathname.toLowerCase();
+    const search = location.search.toLowerCase();
+    if (/history|trend|chart|leaderboard|cooperation|settings|login/.test(path)) return true;
+    if (/history|trend|chart|leaderboard|cooperation|settings|login/.test(search)) return true;
+    if (document.fullscreenElement && document.fullscreenElement.matches?.(".chart-fullscreen-btn, .chart, canvas, svg, div")) return true;
+    return false;
   }
 
+  function findSignalList() {
+    return document.querySelector(SIGNAL_LIST_SELECTOR);
+  }
+
+  function findVirtuosoPanelRoot(list) {
+    if (!list) return null;
+    return list.closest(VIRTUOSO_SCROLLER_SELECTOR);
+  }
+
+  function cleanupPanelClasses() {
+    document.querySelectorAll(`.${VIRTUOSO_PANEL_CLASS}`).forEach(node => {
+      if (!node.querySelector?.(SIGNAL_LIST_SELECTOR)) node.classList.remove(VIRTUOSO_PANEL_CLASS);
+    });
+    document.querySelectorAll(`.${VIRTUOSO_LIST_CLASS}`).forEach(node => {
+      if (!node.closest?.(VIRTUOSO_SCROLLER_SELECTOR)) node.classList.remove(VIRTUOSO_LIST_CLASS);
+    });
+  }
+
+  function markVirtuosoLayout() {
+    cleanupPanelClasses();
+    const list = findSignalList();
+    if (!list) return false;
+
+    const root = findVirtuosoPanelRoot(list);
+    if (root) {
+      root.classList.add(VIRTUOSO_PANEL_CLASS);
+      list.classList.add(VIRTUOSO_LIST_CLASS);
+      return true;
+    }
+
+    list.classList.remove(VIRTUOSO_LIST_CLASS);
+    return false;
+  }
 
   function hideSignalCard(card) {
     if (!card) return;
     card.dataset.spreadradarHidden = "true";
+    card.classList.add(HIDDEN_CLASS);
     card.style.setProperty("display", "none", "important");
   }
 
@@ -369,7 +504,7 @@
   }
 
   function hasSignalList() {
-    const list = document.querySelector(SIGNAL_LIST_SELECTOR);
+    const list = findSignalList();
     return !!list && list.isConnected;
   }
 
@@ -377,30 +512,43 @@
     if (lastPanelState === enabled && document.body.classList.contains(BODY_CLASS) === enabled) return;
     lastPanelState = enabled;
     document.body.classList.toggle(BODY_CLASS, enabled);
+    document.body.classList.toggle(RESERVED_CLASS, enabled);
+  }
+
+  function resetWhenDisabled() {
+    document.querySelectorAll(".spreadradar-signal-close").forEach(btn => btn.remove());
+    document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card[data-spreadradar-close]`).forEach(card => {
+      delete card.dataset.spreadradarClose;
+    });
+    document.querySelectorAll(`.${VIRTUOSO_PANEL_CLASS}`).forEach(node => node.classList.remove(VIRTUOSO_PANEL_CLASS));
+    document.querySelectorAll(`.${VIRTUOSO_LIST_CLASS}`).forEach(node => node.classList.remove(VIRTUOSO_LIST_CLASS));
   }
 
   function syncSignalPanel() {
     updateScrollbarWidthVar();
-    if (document.body) {
-      document.body.classList.toggle(CHART_FS_SUSPENDED_CLASS, chartFsSuspended);
-    }
-    const enabled = !chartFsSuspended && window.innerWidth > DESKTOP_MIN_WIDTH && hasSignalList();
+    const enabled = !isUtilityPage() && window.innerWidth > DESKTOP_MIN_WIDTH && hasSignalList();
     setPanelEnabled(enabled);
 
     if (!enabled) {
-      document.querySelectorAll(".spreadradar-signal-close").forEach(btn => btn.remove());
-      document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card[data-spreadradar-close]`).forEach(card => {
-        delete card.dataset.spreadradarClose;
-      });
+      resetWhenDisabled();
       return;
     }
 
+    markVirtuosoLayout();
     addSignalCloseButtons();
+  }
+
+  function scheduleSync() {
+    if (syncTimer) return;
+    syncTimer = window.setTimeout(() => {
+      syncTimer = 0;
+      syncSignalPanel();
+    }, MUTATION_DEBOUNCE_MS);
   }
 
   function watchDom() {
     if (observer) observer.disconnect();
-    observer = new MutationObserver(() => syncSignalPanel());
+    observer = new MutationObserver(scheduleSync);
     observer.observe(document.documentElement || document.body, {
       childList: true,
       subtree: true
@@ -412,6 +560,7 @@
       if (location.pathname !== lastPath || location.search !== lastSearch) {
         lastPath = location.pathname;
         lastSearch = location.search;
+        chartFsSuppressed = false;
         syncSignalPanel();
       }
     };
@@ -433,15 +582,37 @@
     window.addEventListener("popstate", checkLocation, true);
   }
 
+
+  function watchChartFullscreenButton() {
+    document.addEventListener("click", event => {
+      const button = event.target?.closest?.(CHART_FS_BUTTON_SELECTOR);
+      if (!button) return;
+
+      if (isChartFsCloseButton(button)) {
+        chartFsSuppressed = false;
+        scheduleSync();
+      } else {
+        chartFsSuppressed = true;
+        setPanelEnabled(false);
+        resetWhenDisabled();
+      }
+
+      setTimeout(syncSignalPanel, 0);
+      setTimeout(syncSignalPanel, 160);
+      setTimeout(syncSignalPanel, 420);
+    }, true);
+
+  }
+
   function init() {
     updateScrollbarWidthVar();
     injectStyle();
     watchDom();
     watchSpaNavigation();
-    watchChartFullscreenButtons();
+    watchChartFullscreenButton();
     syncSignalPanel();
-    window.addEventListener("resize", syncSignalPanel, { passive: true });
-    document.addEventListener("fullscreenchange", syncSignalPanel, true);
+    window.addEventListener("resize", scheduleSync, { passive: true });
+    document.addEventListener("fullscreenchange", scheduleSync, true);
     setInterval(syncSignalPanel, SYNC_INTERVAL_MS);
   }
 
