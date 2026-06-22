@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Signal Panel Right Layout
 // @namespace    https://www.arbitterminal.online/
-// @version      1.23-card-only-hide
+// @version      1.24-fullscreen-fix
 // @description  Окремий модуль Right Panel Layout для signal-card
 // @match        https://www.arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
@@ -17,19 +17,17 @@
 
   const STYLE_ID = "spreadradar-signal-panel-layout-style";
   const BODY_CLASS = "spreadradar-signals-panel-on";
-  const CHART_FULLSCREEN_CLASS = "spreadradar-chart-fullscreen-active";
+  const CHART_FS_SUSPENDED_CLASS = "spreadradar-signals-panel-chart-fs-suspended";
   const SIGNAL_LIST_SELECTOR = ".signals-list";
   const DESKTOP_MIN_WIDTH = 1200;
   const SYNC_INTERVAL_MS = 700;
   const SCROLLBAR_WIDTH_VAR = "--spreadradar-v-scrollbar-width";
-  const HIDDEN_SIGNALS_KEY = "spreadradarSignalPanel.hiddenSignals.v2";
-  const HIDDEN_SIGNAL_ABSENT_CLEAR_MS = 30000;
 
   let lastPath = location.pathname;
   let lastSearch = location.search;
   let lastPanelState = null;
-  let observer = null;
   let chartFsSuspended = false;
+  let observer = null;
 
   function injectStyle() {
     let style = document.getElementById(STYLE_ID);
@@ -56,10 +54,6 @@
         height:auto!important;
         min-height:0!important;
         max-height:none!important;
-      }
-
-      body.${CHART_FULLSCREEN_CLASS} .signals-list{
-        display:none!important;
       }
 
       body.${BODY_CLASS} .signals-list{
@@ -268,6 +262,10 @@
         pointer-events:auto!important;
       }
 
+      body.${CHART_FS_SUSPENDED_CLASS} .signals-list{
+        display:none!important;
+      }
+
       @media(max-width:1200px){
         body.${BODY_CLASS} .signals-list{
           position:static!important;
@@ -291,18 +289,6 @@
     } catch (_) {}
   }
 
-  function isElementVisible(el) {
-    if (!(el instanceof Element)) return false;
-    const style = getComputedStyle(el);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
-  }
-
-  function setChartFsSuspended(value) {
-    chartFsSuspended = Boolean(value);
-    document.body?.classList?.toggle(CHART_FULLSCREEN_CLASS, chartFsSuspended);
-  }
 
   function getChartFsButtonMode(button) {
     const text = String(button?.textContent || "").trim();
@@ -311,185 +297,43 @@
     return "unknown";
   }
 
+  function setChartFsSuspended(value) {
+    chartFsSuspended = Boolean(value);
+    if (document.body) {
+      document.body.classList.toggle(CHART_FS_SUSPENDED_CLASS, chartFsSuspended);
+    }
+  }
+
   function handleChartFsButtonClick(button) {
     const mode = getChartFsButtonMode(button);
 
     if (mode === "open") {
       setChartFsSuspended(true);
       syncSignalPanel();
-      setTimeout(syncSignalPanel, 80);
-      setTimeout(syncSignalPanel, 250);
       return;
     }
 
     if (mode === "close") {
-      setTimeout(() => {
+      window.setTimeout(() => {
         setChartFsSuspended(false);
         syncSignalPanel();
-      }, 120);
-      setTimeout(syncSignalPanel, 260);
+      }, 150);
     }
   }
 
-  function normalizeKeyText(value) {
-    return String(value || "")
-      .replace(/\s+/g, " ")
-      .replace(/[×✕]/g, "")
-      .trim()
-      .toLowerCase();
-  }
-
-  function normalizeHiddenEntry(value) {
-    const now = Date.now();
-    if (typeof value === "number") {
-      return { hiddenAt: value, lastSeenAt: value, absentSince: 0 };
-    }
-    if (value && typeof value === "object") {
-      return {
-        hiddenAt: Number(value.hiddenAt || now),
-        lastSeenAt: Number(value.lastSeenAt || value.hiddenAt || now),
-        absentSince: Number(value.absentSince || 0)
-      };
-    }
-    return null;
-  }
-
-  function loadHiddenSignals() {
-    try {
-      const parsed = JSON.parse(sessionStorage.getItem(HIDDEN_SIGNALS_KEY) || "{}");
-      if (!parsed || typeof parsed !== "object") return {};
-      const normalized = {};
-      Object.entries(parsed).forEach(([key, value]) => {
-        const entry = normalizeHiddenEntry(value);
-        if (entry) normalized[key] = entry;
-      });
-      return normalized;
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function saveHiddenSignals(hidden) {
-    try {
-      sessionStorage.setItem(HIDDEN_SIGNALS_KEY, JSON.stringify(hidden || {}));
-    } catch (_) {}
-  }
-
-  function getCurrentSignalCardKeys() {
-    const keys = new Set();
-    document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card`).forEach(card => {
-      const key = getSignalCardKey(card);
-      if (key) keys.add(key);
-    });
-    return keys;
-  }
-
-  function cleanupHiddenSignals(hidden = loadHiddenSignals(), presentKeys = getCurrentSignalCardKeys()) {
-    const now = Date.now();
-    let changed = false;
-
-    Object.entries(hidden).forEach(([key, value]) => {
-      const entry = normalizeHiddenEntry(value);
-      if (!entry) {
-        delete hidden[key];
-        changed = true;
-        return;
-      }
-
-      if (presentKeys.has(key)) {
-        if (entry.absentSince) changed = true;
-        entry.absentSince = 0;
-        entry.lastSeenAt = now;
-        hidden[key] = entry;
-        return;
-      }
-
-      if (!entry.absentSince) {
-        entry.absentSince = now;
-        hidden[key] = entry;
-        changed = true;
-        return;
-      }
-
-      if (now - entry.absentSince >= HIDDEN_SIGNAL_ABSENT_CLEAR_MS) {
-        delete hidden[key];
-        changed = true;
-        return;
-      }
-
-      hidden[key] = entry;
-    });
-
-    if (changed) saveHiddenSignals(hidden);
-    return hidden;
-  }
-
-  function getSignalCardKey(card) {
-    if (!(card instanceof Element)) return "";
-
-    const explicit = card.getAttribute("data-route-key") || card.getAttribute("data-signal-key") || card.dataset?.routeKey || card.dataset?.signalKey;
-    if (explicit) return `explicit:${normalizeKeyText(explicit)}`;
-
-    const symbol = normalizeKeyText(
-      card.querySelector?.("td.symbol, .symbol, [data-help='signal.symbol']")?.textContent ||
-      card.querySelector?.(".header td:first-child")?.textContent ||
-      ""
-    );
-
-    const longExchange = normalizeKeyText(card.querySelector?.("table.exchange-info td.long, table.exchange-info .long, .exchange-info .long")?.textContent || "");
-    const shortExchange = normalizeKeyText(card.querySelector?.("table.exchange-info td.short, table.exchange-info .short, .exchange-info .short")?.textContent || "");
-
-    if (symbol && (longExchange || shortExchange)) {
-      return `route:${symbol}|long:${longExchange}|short:${shortExchange}`;
-    }
-
-    const headerText = normalizeKeyText(card.querySelector?.(".header")?.textContent || "");
-    const exchangesText = normalizeKeyText(card.querySelector?.(".exchange-info")?.textContent || "");
-    const footerText = normalizeKeyText(card.querySelector?.(".signal-footer")?.textContent || "");
-    const compact = `${headerText}|${exchangesText}|${footerText}`.slice(0, 360);
-    return compact ? `text:${compact}` : "";
-  }
-
-  function rememberHiddenCard(card) {
-    const key = getSignalCardKey(card);
-    if (!key) return;
-    const hidden = cleanupHiddenSignals();
-    const now = Date.now();
-    hidden[key] = { hiddenAt: now, lastSeenAt: now, missingScans: 0 };
-    saveHiddenSignals(hidden);
-  }
-
-  function isSignalCardRememberedHidden(card, hidden = cleanupHiddenSignals()) {
-    const key = getSignalCardKey(card);
-    return Boolean(key && hidden[key]);
-  }
-
-  function forceHideSignalCard(card) {
-    if (!(card instanceof Element)) return;
-
-    // Important: do NOT hide .virtuoso-grid-item.
-    // Virtuoso reuses/measures these wrapper nodes; hiding them breaks list virtualization
-    // and can leave only one visible signal card after a rerender.
-    card.dataset.spreadradarHidden = "true";
-    card.style.setProperty("display", "none", "important");
-  }
-
-  function applyRememberedHiddenSignals() {
-    const presentKeys = getCurrentSignalCardKeys();
-    const hidden = cleanupHiddenSignals(loadHiddenSignals(), presentKeys);
-    document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card`).forEach(card => {
-      if (isSignalCardRememberedHidden(card, hidden)) {
-        forceHideSignalCard(card);
-      }
-    });
+  function watchChartFullscreenButtons() {
+    document.addEventListener("click", event => {
+      const button = event.target?.closest?.("button.chart-fs-btn, .chart-fs-btn");
+      if (!button) return;
+      handleChartFsButtonClick(button);
+    }, true);
   }
 
 
   function hideSignalCard(card) {
     if (!card) return;
-    rememberHiddenCard(card);
-    forceHideSignalCard(card);
-    requestAnimationFrame(syncSignalPanel);
+    card.dataset.spreadradarHidden = "true";
+    card.style.setProperty("display", "none", "important");
   }
 
   function stopCloseEvent(event) {
@@ -499,9 +343,7 @@
   }
 
   function addSignalCloseButtons() {
-    applyRememberedHiddenSignals();
     document.querySelectorAll(`${SIGNAL_LIST_SELECTOR} .signal-card:not([data-spreadradar-close])`).forEach(card => {
-      if (card.dataset.spreadradarHidden === "true") return;
       card.dataset.spreadradarClose = "true";
       if (getComputedStyle(card).position === "static") {
         card.style.setProperty("position", "relative", "important");
@@ -514,32 +356,21 @@
       close.title = "Hide signal";
       close.setAttribute("aria-label", "Hide signal");
 
-      const closeNow = event => {
+      close.addEventListener("pointerdown", stopCloseEvent, true);
+      close.addEventListener("mousedown", stopCloseEvent, true);
+      close.addEventListener("touchstart", stopCloseEvent, true);
+      close.addEventListener("click", event => {
         stopCloseEvent(event);
         hideSignalCard(card);
-      };
-
-      close.addEventListener("pointerdown", closeNow, true);
-      close.addEventListener("mousedown", stopCloseEvent, true);
-      close.addEventListener("touchstart", closeNow, true);
-      close.addEventListener("click", closeNow, true);
+      }, true);
 
       card.appendChild(close);
     });
   }
 
-  function hasVisibleSignalCards() {
+  function hasSignalList() {
     const list = document.querySelector(SIGNAL_LIST_SELECTOR);
-    if (!list || !list.isConnected) return false;
-
-    return Array.from(list.querySelectorAll(".signal-card")).some(card => {
-      if (!(card instanceof Element)) return false;
-      if (card.dataset.spreadradarHidden === "true") return false;
-      const style = getComputedStyle(card);
-      if (style.display === "none" || style.visibility === "hidden") return false;
-      const rect = card.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    });
+    return !!list && list.isConnected;
   }
 
   function setPanelEnabled(enabled) {
@@ -550,8 +381,10 @@
 
   function syncSignalPanel() {
     updateScrollbarWidthVar();
-    document.body.classList.toggle(CHART_FULLSCREEN_CLASS, chartFsSuspended);
-    const enabled = !chartFsSuspended && window.innerWidth > DESKTOP_MIN_WIDTH && hasVisibleSignalCards();
+    if (document.body) {
+      document.body.classList.toggle(CHART_FS_SUSPENDED_CLASS, chartFsSuspended);
+    }
+    const enabled = !chartFsSuspended && window.innerWidth > DESKTOP_MIN_WIDTH && hasSignalList();
     setPanelEnabled(enabled);
 
     if (!enabled) {
@@ -567,10 +400,7 @@
 
   function watchDom() {
     if (observer) observer.disconnect();
-    observer = new MutationObserver(() => {
-      applyRememberedHiddenSignals();
-      syncSignalPanel();
-    });
+    observer = new MutationObserver(() => syncSignalPanel());
     observer.observe(document.documentElement || document.body, {
       childList: true,
       subtree: true
@@ -608,13 +438,10 @@
     injectStyle();
     watchDom();
     watchSpaNavigation();
-    applyRememberedHiddenSignals();
+    watchChartFullscreenButtons();
     syncSignalPanel();
     window.addEventListener("resize", syncSignalPanel, { passive: true });
-    document.addEventListener("click", event => {
-      const button = event.target?.closest?.("button.chart-fs-btn, .chart-fs-btn");
-      if (button) handleChartFsButtonClick(button);
-    }, true);
+    document.addEventListener("fullscreenchange", syncSignalPanel, true);
     setInterval(syncSignalPanel, SYNC_INTERVAL_MS);
   }
 
