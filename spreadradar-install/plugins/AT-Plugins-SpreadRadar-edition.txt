@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AT Plugins SpreadRadar edition
 // @namespace    https://www.arbitterminal.online/
-// @version      1.09.93-bybit-no-bingx-funding
+// @version      1.09.93-bybit
 // @description  AT Plugins SpreadRadar edition: панель модулів, звуки, PNL, баланси, кнопки полів, автозапуск, лідерборд і UI-помічники
 // @match        https://www.arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
@@ -48,7 +48,7 @@
 })();
 
 window.__MIX_ULTIMATE_CONFIG__ = window.__MIX_ULTIMATE_CONFIG__ || {};
-window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.93-bybit-no-bingx-funding";
+window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.93-bybit";
 window.__MIX_ULTIMATE_CONFIG__.FEES = { BINANCE: 0.05, BYBIT: 0.055, BINGX: 0.05, KUCOIN: 0.06, BITGET: 0.1, GATEIO: 0.05, MEXC: 0.06, ASTER: 0.04, ASTERDEX: 0.04 };
 
 try {
