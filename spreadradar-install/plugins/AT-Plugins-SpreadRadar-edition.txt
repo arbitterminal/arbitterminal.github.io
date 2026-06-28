@@ -1,10 +1,9 @@
 // ==UserScript==
 // @name         AT Plugins SpreadRadar edition
 // @namespace    https://www.arbitterminal.online/
-// @version      1.09.92-bitget-update
+// @version      1.09.93-bybit-no-bingx-funding
 // @description  AT Plugins SpreadRadar edition: панель модулів, звуки, PNL, баланси, кнопки полів, автозапуск, лідерборд і UI-помічники
 // @match        https://www.arbitterminal.online/*
-// @match        https://arbitterminal.online/*
 // @match        https://*.arbitterminal.online/*
 // @connect      arbitterminal.github.io
 // @updateURL    https://arbitterminal.github.io/spreadradar-install/plugins/AT-Plugins-SpreadRadar-edition.txt
@@ -49,7 +48,7 @@
 })();
 
 window.__MIX_ULTIMATE_CONFIG__ = window.__MIX_ULTIMATE_CONFIG__ || {};
-window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.92-header-update";
+window.__MIX_ULTIMATE_CONFIG__.BUILD_VERSION = "1.09.93-bybit-no-bingx-funding";
 window.__MIX_ULTIMATE_CONFIG__.FEES = { BINANCE: 0.05, BYBIT: 0.055, BINGX: 0.05, KUCOIN: 0.06, BITGET: 0.1, GATEIO: 0.05, MEXC: 0.06, ASTER: 0.04, ASTERDEX: 0.04 };
 
 try {
@@ -133,7 +132,6 @@ try {
     { id: "delistBadge",          apply: "instant" },
     { id: "smartShare",           apply: "reload"  },
     { id: "spreadScreener",       apply: "instant" },
-    { id: "bingxFundingGuard",    apply: "instant" },
     { id: "tickerLatin",          apply: "instant" },
     { id: "orderSizeMultiplier",  apply: "instant" },
     { id: "sounds",               apply: "instant", panel: false },
@@ -152,7 +150,7 @@ try {
 
   const I18N = {
     en: {
-      panelTitle: "MIX Plugin Pack v1.09.91",
+      panelTitle: "MIX Plugin Pack v1.09.93",
       close: "Close",
       apply: "Apply changes",
       instant: "instant",
@@ -189,7 +187,6 @@ try {
         delistBadge:         { name: "DELIST badge",         tip: "Shows a red DELIST badge when delisting is found." },
         smartShare:          { name: "Smart Link",           tip: "Copies a card settings link." },
         spreadScreener:      { name: "Spread Screener",      tip: "Opens local spread history screener from the card or signal route." },
-        bingxFundingGuard:   { name: "BingX Funding Guard",  tip: "Protects BingX cards around funding by multiplying Open/Close ticks by 100 and restoring after reset." },
         tickerLatin:         { name: "Latin Ticker Input",   tip: "Converts Ukrainian/Russian keyboard layout input in Symbol to Latin ticker text and fixes decimal dots in spread fields." },
         orderSizeMultiplier: { name: "x2/÷2 Multiplier",    tip: "Adds ÷2 and x2 buttons next to Order Size." },
         sounds:              { name: "Sounds",               tip: "Plays open, close and notification sounds." },
@@ -207,7 +204,7 @@ try {
       }
     },
     ua: {
-      panelTitle: "Збірка плагінів v1.09.91",
+      panelTitle: "Збірка плагінів v1.09.93",
       close: "Закрити",
       apply: "Застосувати зміни",
       instant: "одразу",
@@ -244,7 +241,6 @@ try {
         delistBadge:         { name: "Плашка DELIST",        tip: "Показує плашку DELIST при делістингу." },
         smartShare:          { name: "Розумне посилання",    tip: "Копіює посилання з налаштуваннями картки." },
         spreadScreener:      { name: "Spread history screener", tip: "Відкриває локальний скрінер історії спреду з маршруту картки або сигналу." },
-        bingxFundingGuard:   { name: "BingX Funding Guard",  tip: "За 35 сек до funding на BingX множить Open/Close T на 100 і повертає після reset + 10 сек." },
         tickerLatin:         { name: "Латиниця в тікері",    tip: "Конвертує Symbol у латиницю та виправляє крапку в полях Open/Close Spread." },
         orderSizeMultiplier: { name: "Множник x2/÷2",       tip: "Додає кнопки ÷2 і x2 поруч з Order Size." },
         sounds:              { name: "Звуки",                tip: "Відтворює звуки відкриття, закриття та сповіщень." },
@@ -262,7 +258,7 @@ try {
       }
     },
     ru: {
-      panelTitle: "Сборка плагинов v1.09.91",
+      panelTitle: "Сборка плагинов v1.09.93",
       close: "Закрыть",
       apply: "Применить изменения",
       instant: "сразу",
@@ -299,7 +295,6 @@ try {
         delistBadge:         { name: "Плашка DELIST",        tip: "Показывает плашку DELIST при делистинге." },
         smartShare:          { name: "Умная ссылка",         tip: "Копирует ссылку с настройками карточки." },
         spreadScreener:      { name: "Spread history screener", tip: "Открывает локальный скринер истории спреда из маршрута карточки или сигнала." },
-        bingxFundingGuard:   { name: "BingX Funding Guard",  tip: "За 35 сек до funding на BingX умножает Open/Close T на 100 и возвращает после reset + 10 сек." },
         tickerLatin:         { name: "Латиница в тикере",    tip: "Конвертирует Symbol в латиницу и исправляет точку в полях Open/Close Spread." },
         orderSizeMultiplier: { name: "Множитель x2/÷2",      tip: "Добавляет кнопки ÷2 и x2 рядом с Order Size." },
         sounds:              { name: "Звуки",                tip: "Проигрывает звуки открытия, закрытия и уведомлений." },
@@ -1553,524 +1548,6 @@ try {
 })();
 
 
-/* ===== МОДУЛЬ: BingX Funding Guard ===== */
-
-(function () {
-  "use strict";
-
-  const MODULE_ID = "bingxFundingGuard";
-  const modules = window.__MIX_MODULES__;
-  if (!modules) return;
-
-  const VERSION = "3.0-mix";
-  const STORAGE_KEY = "facikulBingxFundingTickGuard.state.v3";
-  const STYLE_ID = "facikul-bingx-funding-guard-style";
-
-  const CONFIG = {
-    exchangeRe: /\b(?:BINGX|BINX)\b/i,
-    protectBeforeFundingSeconds: 35,
-    protectAfterFundingMs: 10 * 1000,
-    fundingResetAboveSeconds: 120,
-    scanMs: 500,
-    observerDebounceMs: 150,
-    multiplier: 100,
-    alreadyHighThreshold: 100,
-    maxCardsPerScan: 120,
-    hardEntryTtlMs: 12 * 60 * 60 * 1000,
-    clickSaveButtons: true
-  };
-
-  let running = false;
-  let scanning = false;
-  let pendingScanTimer = 0;
-  let fallbackTimer = 0;
-  let observer = null;
-  let lastStatus = "Starting";
-
-  const state = loadState();
-
-  function isEnabled() {
-    return modules.isEnabled(MODULE_ID) !== false;
-  }
-
-  function loadState() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      if (parsed && typeof parsed === "object" && parsed.cards && typeof parsed.cards === "object") {
-        return parsed;
-      }
-    } catch (_) {}
-    return { cards: {} };
-  }
-
-  function saveState() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
-  }
-
-  function textOf(node) {
-    return (node && (node.innerText || node.textContent) ? node.innerText || node.textContent : "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function normalizeText(value) {
-    return String(value || "").replace(/\s+/g, " ").trim();
-  }
-
-  function isVisible(el) {
-    if (!(el instanceof Element) || !el.isConnected) return false;
-    const rect = el.getBoundingClientRect();
-    const style = getComputedStyle(el);
-    return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
-  }
-
-  function parseSeconds(timeText) {
-    const text = normalizeText(timeText);
-    const paren = text.match(/\((\d{1,2}:\d{2}(?::\d{2})?)\)/);
-    let time = paren ? paren[1] : "";
-
-    if (!time) {
-      const times = Array.from(text.matchAll(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g)).map((match) => match[0]);
-      time = times.length > 1 ? times[times.length - 1] : times[0] || "";
-    }
-
-    const parts = time.split(":").map((part) => Number(part));
-    if (parts.length === 2 && parts.every((part) => Number.isFinite(part))) return parts[0] * 60 + parts[1];
-    if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    return null;
-  }
-
-  function getHiddenRoute(card) {
-    const hidden = card?.querySelector?.('input[type="hidden"]');
-    return normalizeText(hidden?.value || "");
-  }
-
-  function hasBingx(card, cardText = "") {
-    const hidden = getHiddenRoute(card);
-    if (CONFIG.exchangeRe.test(hidden)) return true;
-    const exchangeText = textOf(card?.querySelector?.(".arbitrage-info, [data-help='tradeCard.exchanges']"));
-    if (CONFIG.exchangeRe.test(exchangeText)) return true;
-    const headerText = textOf(card?.querySelector?.(".exhange-price-info tr.header, .exchange-price-info tr.header"));
-    if (CONFIG.exchangeRe.test(headerText)) return true;
-    return CONFIG.exchangeRe.test(cardText || textOf(card));
-  }
-
-  function getCardSymbol(card, cardText = "") {
-    const symbolNode = card?.querySelector?.('[data-help="tradeCard.symbol"], .trade-details strong');
-    const symbol = normalizeText(symbolNode ? textOf(symbolNode) : "").toUpperCase();
-    if (symbol) return symbol.replace(/[^A-Z0-9_./:-]/g, "");
-
-    const hidden = getHiddenRoute(card).toUpperCase();
-    const parts = hidden.split("_").filter(Boolean);
-    if (parts.length >= 2) return parts[1].replace(/[^A-Z0-9]/g, "");
-
-    const text = cardText || textOf(card);
-    const match = text.match(/\b([A-Z0-9]{1,20})(?:USDT)?\b/);
-    return match ? match[1] : "UNKNOWN";
-  }
-
-  function getExchangeDirectionMeta(card, cardText = "") {
-    const info = card?.querySelector?.(".arbitrage-info, [data-help='tradeCard.exchanges']");
-    const text = `${textOf(info)} ${cardText || ""}`;
-    const longMatch = text.match(/\b([A-Z0-9.]+)\s*↑/i);
-    const shortMatch = text.match(/\b([A-Z0-9.]+)\s*↓/i);
-
-    const hidden = getHiddenRoute(card).toUpperCase();
-    const hiddenParts = hidden.split("_").filter(Boolean);
-    const hiddenEx1 = hiddenParts[0] || "";
-    const hiddenEx2 = hiddenParts.length >= 4 ? hiddenParts[3] : "";
-
-    return {
-      longExchange: normalizeText(longMatch?.[1] || hiddenEx1 || "UNKNOWN").toUpperCase(),
-      shortExchange: normalizeText(shortMatch?.[1] || hiddenEx2 || "UNKNOWN").toUpperCase()
-    };
-  }
-
-  function getActiveSide(card) {
-    const activeSideButton = Array.from(card.querySelectorAll(".side-buttons button.active"))
-      .find((button) => /^(?:LONG|SHORT)$/i.test(textOf(button)));
-    if (activeSideButton) return textOf(activeSideButton).toUpperCase();
-
-    const cardText = textOf(card);
-    const sideMatch = cardText.match(/\bSide:\s*(?:Auto\s*✓\s*)?(LONG|SHORT)\b/i);
-    return sideMatch ? sideMatch[1].toUpperCase() : "AUTO";
-  }
-
-  function getCardKey(card, cardText = "") {
-    const hidden = getHiddenRoute(card);
-    if (hidden && CONFIG.exchangeRe.test(hidden)) return `ROUTE:${hidden.toLowerCase()}`;
-
-    const symbol = getCardSymbol(card, cardText);
-    const meta = getExchangeDirectionMeta(card, cardText);
-    const side = getActiveSide(card);
-    if (!symbol || symbol === "UNKNOWN" || !meta.longExchange || !meta.shortExchange) return "";
-    if (meta.longExchange === "UNKNOWN" || meta.shortExchange === "UNKNOWN") return "";
-
-    return [`SYM:${symbol}`, `L:${meta.longExchange}`, `S:${meta.shortExchange}`, `SIDE:${side}`].join("|");
-  }
-
-  function getRows(card) {
-    return Array.from(card.querySelectorAll(".exhange-price-info tr, .exchange-price-info tr"))
-      .map((row) => {
-        const cells = Array.from(row.querySelectorAll("th,td"));
-        return { row, cells, texts: cells.map(textOf), text: textOf(row) };
-      })
-      .filter((row) => row.cells.length);
-  }
-
-  function getBingxColumnIndex(card) {
-    const rows = getRows(card);
-    const header = rows.find((row) => row.texts.some((text) => CONFIG.exchangeRe.test(text)));
-    if (!header) return { rows, index: -1 };
-    const index = header.texts.findIndex((text) => CONFIG.exchangeRe.test(text));
-    return { rows, index };
-  }
-
-  function getBingxFundingSeconds(card) {
-    const { rows, index } = getBingxColumnIndex(card);
-    if (index < 0) return null;
-
-    const row = rows.find((candidate) => /Next\s+Funding/i.test(candidate.texts[0] || candidate.text));
-    if (!row) return null;
-
-    const text = row.texts[index] || row.texts[row.texts.length - 1] || "";
-    return parseSeconds(text);
-  }
-
-  function findFieldGroup(card, type) {
-    const dataHelp = type === "open" ? "tradeCard.openSpread" : "tradeCard.closeSpread";
-    const direct = card.querySelector(`[data-help="${dataHelp}"]`);
-    if (direct) return direct;
-
-    const groups = Array.from(card.querySelectorAll(".editable-fields .field-group"));
-    const labelRe = type === "open" ? /Open\s+Spread/i : /Close\s+Spread/i;
-    return groups.find((group) => labelRe.test(textOf(group.querySelector("label") || group))) || null;
-  }
-
-  function getTickFields(card) {
-    const openGroup = findFieldGroup(card, "open");
-    const closeGroup = findFieldGroup(card, "close");
-    const openInput = openGroup?.querySelector?.("input.tick-input") || null;
-    const closeInput = closeGroup?.querySelector?.("input.tick-input") || null;
-    if (!openInput || !closeInput) return null;
-    return { open: { input: openInput }, close: { input: closeInput } };
-  }
-
-  function findSaveButtonForTick(input) {
-    const group = input?.closest?.(".field-group");
-    if (!group) return null;
-    const buttons = Array.from(group.querySelectorAll("button.save-btn"));
-    if (!buttons.length) return null;
-    const inputRect = input.getBoundingClientRect();
-    const rightButton = buttons.find((button) => button.getBoundingClientRect().left >= inputRect.right - 2);
-    return rightButton || buttons[buttons.length - 1];
-  }
-
-  function parseTick(value) {
-    const number = Number(normalizeText(value).replace(",", "."));
-    return Number.isFinite(number) && number > 0 ? number : null;
-  }
-
-  function formatTick(value) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return "";
-    return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(8)));
-  }
-
-  function isAlreadyHighTick(value) {
-    const tick = parseTick(value);
-    return tick !== null && tick >= CONFIG.alreadyHighThreshold;
-  }
-
-  function toProtectedTick(value) {
-    const tick = parseTick(value);
-    if (tick === null) return null;
-    if (tick >= CONFIG.alreadyHighThreshold) return null;
-    return formatTick(tick * CONFIG.multiplier);
-  }
-
-  function setNativeValue(input, value) {
-    const proto = Object.getPrototypeOf(input);
-    const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
-    if (descriptor && typeof descriptor.set === "function") descriptor.set.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function clickSaveForInput(input) {
-    if (!CONFIG.clickSaveButtons || !input) return;
-    const clickOnce = () => {
-      const saveButton = findSaveButtonForTick(input);
-      if (saveButton && isVisible(saveButton) && !saveButton.disabled) saveButton.click();
-    };
-    requestAnimationFrame(() => requestAnimationFrame(clickOnce));
-    setTimeout(clickOnce, 90);
-  }
-
-  function setTickValue(input, value) {
-    if (!input || value === null || value === undefined || value === "") return false;
-    const next = String(value);
-    if (String(input.value) === next) return false;
-    input.focus();
-    setNativeValue(input, next);
-    input.blur();
-    clickSaveForInput(input);
-    return true;
-  }
-
-  function setWarning(input, enabled, message = "") {
-    if (!input) return;
-    input.classList.toggle("facikul-tick-guard-warning", Boolean(enabled));
-    if (enabled) input.title = message || "Tick was already high before funding guard. Check manually.";
-    else if (/Tick was already high before funding guard/i.test(input.title || "")) input.removeAttribute("title");
-  }
-
-  function applyProtection(card, cardText, secondsLeft) {
-    const key = getCardKey(card, cardText);
-    if (!key) return { action: "skip-no-key" };
-    const fields = getTickFields(card);
-    if (!fields) return { action: "skip-no-ticks", key };
-
-    const existing = state.cards[key];
-    if (existing?.boosted) {
-      existing.lastSeenAt = Date.now();
-      existing.lastSecondsLeft = secondsLeft;
-      saveState();
-      return { action: "already-protected", key };
-    }
-
-    const originalOpenTick = String(fields.open.input.value || "");
-    const originalCloseTick = String(fields.close.input.value || "");
-    const openAlreadyHigh = isAlreadyHighTick(originalOpenTick);
-    const closeAlreadyHigh = isAlreadyHighTick(originalCloseTick);
-    const protectedOpenTick = openAlreadyHigh ? originalOpenTick : toProtectedTick(originalOpenTick);
-    const protectedCloseTick = closeAlreadyHigh ? originalCloseTick : toProtectedTick(originalCloseTick);
-
-    if (!openAlreadyHigh && !protectedOpenTick) return { action: "skip-invalid-open", key };
-    if (!closeAlreadyHigh && !protectedCloseTick) return { action: "skip-invalid-close", key };
-
-    const changedOpen = openAlreadyHigh ? false : setTickValue(fields.open.input, protectedOpenTick);
-    const changedClose = closeAlreadyHigh ? false : setTickValue(fields.close.input, protectedCloseTick);
-    const now = Date.now();
-
-    state.cards[key] = {
-      boosted: true,
-      route: getHiddenRoute(card),
-      symbol: getCardSymbol(card, cardText),
-      originalOpenTick,
-      originalCloseTick,
-      protectedOpenTick: protectedOpenTick || originalOpenTick,
-      protectedCloseTick: protectedCloseTick || originalCloseTick,
-      openAlreadyHigh,
-      closeAlreadyHigh,
-      lastSecondsLeft: secondsLeft,
-      postFundingUntil: 0,
-      boostedAt: now,
-      lastSeenAt: now
-    };
-    saveState();
-    return { action: changedOpen || changedClose ? "protected" : "tracked-high", key, openAlreadyHigh, closeAlreadyHigh };
-  }
-
-  function restoreProtection(card, cardText, reason, secondsLeft) {
-    const key = getCardKey(card, cardText);
-    const entry = key ? state.cards[key] : null;
-    if (!entry?.boosted) return { action: "skip-no-state", key };
-    const fields = getTickFields(card);
-    if (!fields) return { action: "skip-no-ticks", key };
-
-    const changedOpen = entry.openAlreadyHigh ? false : setTickValue(fields.open.input, entry.originalOpenTick);
-    const changedClose = entry.closeAlreadyHigh ? false : setTickValue(fields.close.input, entry.originalCloseTick);
-
-    if (entry.openAlreadyHigh) setWarning(fields.open.input, true);
-    else setWarning(fields.open.input, false);
-    if (entry.closeAlreadyHigh) setWarning(fields.close.input, true);
-    else setWarning(fields.close.input, false);
-
-    delete state.cards[key];
-    saveState();
-    return { action: changedOpen || changedClose ? "restored" : "already-restored", key, reason, secondsLeft };
-  }
-
-  function getCards() {
-    const activeCards = Array.from(document.querySelectorAll(".trade-card.active"));
-    const candidates = activeCards.length
-      ? activeCards
-      : Array.from(document.querySelectorAll('.trade-card[data-help="tradeCard.card"], .trade-card'));
-    return candidates
-      .filter((card) => card instanceof Element && isVisible(card))
-      .map((card) => ({ card, text: textOf(card) }))
-      .filter((item) => hasBingx(item.card, item.text))
-      .slice(0, CONFIG.maxCardsPerScan);
-  }
-
-  function cleanupState(seenKeys) {
-    const now = Date.now();
-    let removed = 0;
-    for (const [key, entry] of Object.entries(state.cards)) {
-      const boostedAt = Number(entry.boostedAt || 0);
-      const tooOld = boostedAt && now - boostedAt > CONFIG.hardEntryTtlMs;
-      if (tooOld && !seenKeys.has(key)) {
-        delete state.cards[key];
-        removed += 1;
-      }
-    }
-    if (removed) saveState();
-    return removed;
-  }
-
-  function scanOnce() {
-    if (!running || !isEnabled()) {
-      lastStatus = "OFF";
-      return;
-    }
-
-    const cards = getCards();
-    const seenKeys = new Set();
-    const now = Date.now();
-    let protectedCount = 0;
-    let trackedHigh = 0;
-    let armed = 0;
-    let restored = 0;
-    let postWait = 0;
-    let skippedNoTimer = 0;
-    let skippedInvalid = 0;
-    let cleaned = 0;
-
-    for (const { card, text } of cards) {
-      const key = getCardKey(card, text);
-      if (key) seenKeys.add(key);
-      const secondsLeft = getBingxFundingSeconds(card);
-      const entry = key ? state.cards[key] : null;
-
-      if (secondsLeft === null) {
-        skippedNoTimer += 1;
-        continue;
-      }
-
-      if (entry?.boosted) {
-        entry.lastSeenAt = now;
-        if (!entry.postFundingUntil && Number(entry.lastSecondsLeft) <= CONFIG.protectBeforeFundingSeconds && secondsLeft > CONFIG.fundingResetAboveSeconds) {
-          entry.postFundingUntil = now + CONFIG.protectAfterFundingMs;
-          saveState();
-        }
-        entry.lastSecondsLeft = secondsLeft;
-
-        if (entry.postFundingUntil) {
-          if (now >= Number(entry.postFundingUntil)) {
-            const result = restoreProtection(card, text, "post-funding-expired", secondsLeft);
-            if (/restored|already-restored/.test(result.action)) restored += 1;
-          } else {
-            postWait += 1;
-            saveState();
-          }
-          continue;
-        }
-
-        if (secondsLeft <= CONFIG.protectBeforeFundingSeconds) {
-          armed += 1;
-          saveState();
-          continue;
-        }
-
-        if (secondsLeft > CONFIG.fundingResetAboveSeconds) {
-          entry.postFundingUntil = now + CONFIG.protectAfterFundingMs;
-          saveState();
-          postWait += 1;
-          continue;
-        }
-      }
-
-      if (secondsLeft <= CONFIG.protectBeforeFundingSeconds) {
-        const result = applyProtection(card, text, secondsLeft);
-        if (result.action === "protected") protectedCount += 1;
-        else if (result.action === "tracked-high") trackedHigh += 1;
-        else if (/invalid|no-key|no-ticks/.test(result.action)) skippedInvalid += 1;
-      }
-    }
-
-    cleaned = cleanupState(seenKeys);
-    const activeStateCount = Object.keys(state.cards).length;
-    lastStatus = `Cards ${cards.length} | Protect ${protectedCount} | High ${trackedHigh} | Armed ${armed || activeStateCount} | Post ${postWait} | Restore ${restored} | No timer ${skippedNoTimer} | Invalid ${skippedInvalid} | Clean ${cleaned}`;
-  }
-
-  function runScanSafely() {
-    if (scanning) return;
-    scanning = true;
-    try { scanOnce(); }
-    catch (error) {
-      lastStatus = `Error: ${error.message}`;
-      console.warn("[MIX BingX Funding Guard]", error);
-    } finally { scanning = false; }
-  }
-
-  function scheduleScan(delay = 0) {
-    if (!running || !isEnabled()) return;
-    if (pendingScanTimer) return;
-    pendingScanTimer = window.setTimeout(() => {
-      pendingScanTimer = 0;
-      runScanSafely();
-    }, delay);
-  }
-
-  function startObserver() {
-    if (observer || !document.body) return;
-    observer = new MutationObserver(() => scheduleScan(CONFIG.observerDebounceMs));
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  }
-
-  function stopObserver() {
-    if (observer) { observer.disconnect(); observer = null; }
-  }
-
-  function injectStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      input.tick-input.facikul-tick-guard-warning {
-        outline: 2px solid #ef4444 !important;
-        outline-offset: 1px !important;
-        background: rgba(239,68,68,.12) !important;
-        box-shadow: 0 0 0 2px rgba(239,68,68,.18) !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function start() {
-    if (running) return;
-    running = true;
-    injectStyle();
-    startObserver();
-    scheduleScan(0);
-    if (!fallbackTimer) fallbackTimer = window.setInterval(() => scheduleScan(0), CONFIG.scanMs);
-    console.log(`[MIX BingX Funding Guard] v${VERSION} started`, CONFIG);
-  }
-
-  function stop() {
-    running = false;
-    if (pendingScanTimer) { clearTimeout(pendingScanTimer); pendingScanTimer = 0; }
-    if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = 0; }
-    stopObserver();
-    lastStatus = "OFF";
-  }
-
-  window.__MIX_BINGX_FUNDING_GUARD__ = {
-    version: VERSION,
-    config: CONFIG,
-    getStatus: () => lastStatus,
-    getState: () => JSON.parse(JSON.stringify(state)),
-    scan: runScanSafely,
-    start,
-    stop
-  };
-
-  modules.onToggle(MODULE_ID, enabled => { if (enabled) start(); else stop(); });
-  if (isEnabled()) start(); else stop();
-})();
-
 /* ===== МОДУЛЬ: діапазони 3/5/15/30 ===== */
 
 (function () {
@@ -2664,6 +2141,12 @@ try {
     "GATE.IO": "gate",
     BINGX: "bingx",
     BING: "bingx",
+    BYBIT: "bybit",
+    BYBITUSDT: "bybit",
+    BYBITFUTURES: "bybit",
+    BYBITPERP: "bybit",
+    "BYBIT.USDT": "bybit",
+    "BYBIT.FUTURES": "bybit",
     BITGET: "bitget",
     ASTERDEX: "aster",
     ASTER: "aster",
@@ -2721,33 +2204,52 @@ try {
         box-shadow:0 4px 18px rgba(0,0,0,.22);pointer-events:none;
       }
       #${LIVE_TIP_ID}{
-        position:fixed;z-index:100501;min-width:220px;
-        background:rgba(17,24,39,.96);color:#fff;border:1px solid rgba(255,255,255,.14);
-        border-radius:7px;padding:9px 11px;font:14.4px/1.35 Arial,sans-serif;
-        box-shadow:0 8px 22px rgba(0,0,0,.28);pointer-events:none;
+        position:fixed;
+        z-index:100501;
+        min-width:220px;
+        max-width:260px;
+        padding:9px 11px;
+        border-radius:7px;
+        background:rgba(17,24,39,.96);
+        border:1px solid rgba(255,255,255,.14);
+        color:#fff;
+        font:14.4px/1.35 Arial,system-ui,sans-serif;
+        box-shadow:0 8px 22px rgba(0,0,0,.28);
+        pointer-events:none;
         white-space:nowrap;
       }
-      #${LIVE_TIP_ID} .sr-live-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-      #${LIVE_TIP_ID} .sr-live-label{color:#aeb8c6}
-      #${LIVE_TIP_ID} .sr-live-value{font-weight:700;color:#4ade80}
-      #${LIVE_TIP_ID} .sr-live-warning{font-weight:700;color:#facc15}
-      #${LIVE_TIP_ID} .sr-live-close{color:#f87171}
-      #${LIVE_TIP_ID} .sr-live-muted{color:#aeb8c6}
-      #${LIVE_TIP_ID} .sr-live-title{font-weight:800;color:#cbd5e1;letter-spacing:.02em}
-      #${LIVE_TIP_ID} .sr-live-money{font-weight:900;color:#4ade80}
-      #${LIVE_TIP_ID} .sr-live-spread{font-size:1.3em;font-weight:900;line-height:1}
-      #${LIVE_TIP_ID} .sr-live-depth-ok{font-weight:900;color:#4ade80}
-      #${LIVE_TIP_ID} .sr-live-depth-no{font-weight:900;color:#ff7b7b}
-      #${LIVE_TIP_ID} .sr-live-chart{width:220px;height:34px;margin-top:8px}
-      #${LIVE_TIP_ID} .sr-live-chart svg{display:block;width:100%;height:100%;overflow:visible}
-      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-zero{stroke:rgba(96,165,250,.62);stroke-width:1.15;stroke-dasharray:3 3}
-      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-line{fill:none;stroke:#facc15;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}
-      #${LIVE_TIP_ID} .sr-live-chart .sr-chart-fill{fill:rgba(250,204,21,.12)}
+      #${LIVE_TIP_ID} .sr-live-row{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin:2px 0;
+        white-space:nowrap;
+      }
+      #${LIVE_TIP_ID} .sr-live-title{font-weight:800;color:#cbd5e1;letter-spacing:.02em;}
+      #${LIVE_TIP_ID} .sr-live-money{font-weight:900;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-value{font-weight:700;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-warning{font-weight:700;color:#facc15;}
+      #${LIVE_TIP_ID} .sr-live-depth-ok{font-weight:900;color:#4ade80;}
+      #${LIVE_TIP_ID} .sr-live-depth-no{font-weight:900;color:#ff7b7b;}
+      #${LIVE_TIP_ID} .sr-live-muted{color:#aeb8c6;}
+      #${LIVE_TIP_ID} .sr-live-spread{font-size:1.3em;font-weight:900;line-height:1;}
+      #${LIVE_TIP_ID} .sr-live-chart{
+        width:220px;
+        height:34px;
+        margin-top:8px;
+        overflow:visible;
+      }
+      #${LIVE_TIP_ID} .sr-live-chart svg{display:block;width:100%;height:100%;overflow:visible;}
+      #${LIVE_TIP_ID} .sr-chart-zero{stroke:rgba(96,165,250,.62);stroke-width:1.15;stroke-dasharray:3 3;}
+      #${LIVE_TIP_ID} .sr-chart-line{fill:none;stroke:#facc15;stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round;}
+      #${LIVE_TIP_ID} .sr-chart-fill{fill:rgba(250,204,21,.12);stroke:none;}
       body.mix-spread-screener-on .signals-list .signal-card .mix-signal-live-host{
+        position:relative!important;
         white-space:normal!important;
         overflow:visible!important;
         text-overflow:clip!important;
-        vertical-align:top!important;
+        vertical-align:middle!important;
       }
       body.mix-spread-screener-on .signals-list .signal-card table.exchange-info td.mix-signal-live-host{
         min-width:62px!important;
@@ -2761,8 +2263,12 @@ try {
         box-shadow:none!important;
       }
       .mix-signal-live-inline{
+        position:absolute!important;
+        left:2px!important;
+        top:50%!important;
+        transform:translateY(-50%)!important;
         display:inline-block!important;
-        margin-top:2px!important;
+        margin-top:0!important;
         padding:1px 5px!important;
         max-width:calc(100% - 6px)!important;
         border-radius:5px!important;
@@ -2774,19 +2280,37 @@ try {
         text-decoration:none!important;
         text-shadow:none!important;
       }
+      .mix-signal-live-inline.sr-spread-tone,
+      #${LIVE_TIP_ID} .sr-live-spread.sr-spread-tone{
+        color:var(--sr-spread-color,#94a3b8)!important;
+        text-shadow:0 0 var(--sr-spread-glow-size,6px) var(--sr-spread-glow,transparent)!important;
+      }
+      .sr-spread-tone.is-spread-pos-warm-1{--sr-spread-color:#f8d27a;--sr-spread-glow:rgba(248,210,122,.18);--sr-spread-glow-size:5px;}
+      .sr-spread-tone.is-spread-pos-warm-2{--sr-spread-color:#f5c05f;--sr-spread-glow:rgba(245,192,95,.2);--sr-spread-glow-size:5px;}
+      .sr-spread-tone.is-spread-pos-warm-3{--sr-spread-color:#f7ad4f;--sr-spread-glow:rgba(247,173,79,.22);--sr-spread-glow-size:6px;}
+      .sr-spread-tone.is-spread-pos-warm-4{--sr-spread-color:#fb9842;--sr-spread-glow:rgba(251,152,66,.24);--sr-spread-glow-size:6px;}
+      .sr-spread-tone.is-spread-pos-warm-5{--sr-spread-color:#ff8533;--sr-spread-glow:rgba(255,133,51,.27);--sr-spread-glow-size:7px;}
+      .sr-spread-tone.is-spread-pos-green-1{--sr-spread-color:#86efac;--sr-spread-glow:rgba(134,239,172,.22);--sr-spread-glow-size:6px;}
+      .sr-spread-tone.is-spread-pos-green-2{--sr-spread-color:#5eea8f;--sr-spread-glow:rgba(94,234,143,.26);--sr-spread-glow-size:7px;}
+      .sr-spread-tone.is-spread-pos-green-3{--sr-spread-color:#3ee879;--sr-spread-glow:rgba(62,232,121,.3);--sr-spread-glow-size:8px;}
+      .sr-spread-tone.is-spread-pos-green-4{--sr-spread-color:#22e66a;--sr-spread-glow:rgba(34,230,106,.34);--sr-spread-glow-size:9px;}
+      .sr-spread-tone.is-spread-pos-green-5{--sr-spread-color:#19ff73;--sr-spread-glow:rgba(25,255,115,.38);--sr-spread-glow-size:10px;}
+      .sr-spread-tone.is-spread-neg-soft-1{--sr-spread-color:#f7aaa6;--sr-spread-glow:rgba(247,170,166,.16);--sr-spread-glow-size:5px;}
+      .sr-spread-tone.is-spread-neg-soft-2{--sr-spread-color:#f5918d;--sr-spread-glow:rgba(245,145,141,.18);--sr-spread-glow-size:5px;}
+      .sr-spread-tone.is-spread-neg-soft-3{--sr-spread-color:#f07878;--sr-spread-glow:rgba(240,120,120,.2);--sr-spread-glow-size:6px;}
+      .sr-spread-tone.is-spread-neg-soft-4{--sr-spread-color:#e86468;--sr-spread-glow:rgba(232,100,104,.23);--sr-spread-glow-size:6px;}
+      .sr-spread-tone.is-spread-neg-soft-5{--sr-spread-color:#dc555d;--sr-spread-glow:rgba(220,85,93,.26);--sr-spread-glow-size:7px;}
+      .sr-spread-tone.is-spread-neg-deep-1{--sr-spread-color:#d64b56;--sr-spread-glow:rgba(214,75,86,.27);--sr-spread-glow-size:7px;}
+      .sr-spread-tone.is-spread-neg-deep-2{--sr-spread-color:#c94350;--sr-spread-glow:rgba(201,67,80,.29);--sr-spread-glow-size:8px;}
+      .sr-spread-tone.is-spread-neg-deep-3{--sr-spread-color:#bd3b4a;--sr-spread-glow:rgba(189,59,74,.31);--sr-spread-glow-size:8px;}
+      .sr-spread-tone.is-spread-neg-deep-4{--sr-spread-color:#b13445;--sr-spread-glow:rgba(177,52,69,.33);--sr-spread-glow-size:9px;}
+      .sr-spread-tone.is-spread-neg-deep-5{--sr-spread-color:#a62f40;--sr-spread-glow:rgba(166,47,64,.35);--sr-spread-glow-size:9px;}
       .mix-signal-live-inline.is-positive{color:#4ade80!important;text-shadow:0 0 6px rgba(74,222,128,.22)!important;}
       .mix-signal-live-inline.is-warning{color:#facc15!important;}
       .mix-signal-live-inline.is-negative{color:#ef4444!important;}
-      .mix-signal-live-inline.is-zero{color:#facc15!important;}
-      .mix-signal-live-inline.is-depth-no{display:none!important;}
       .mix-signal-live-inline.is-muted{color:#94a3b8!important;}
-      .mix-signal-live-inline.is-hidden{display:none!important;}
-      #${LIVE_TIP_ID} .sr-spread-tone.is-positive{color:#4ade80!important;text-shadow:0 0 6px rgba(74,222,128,.22)!important;}
-      #${LIVE_TIP_ID} .sr-spread-tone.is-warning{color:#facc15!important;}
-      #${LIVE_TIP_ID} .sr-spread-tone.is-negative{color:#ef4444!important;}
-      #${LIVE_TIP_ID} .sr-spread-tone.is-zero{color:#facc15!important;}
-      #${LIVE_TIP_ID} .sr-spread-tone.is-muted{color:#94a3b8!important;}
-    `;
+      .mix-signal-live-inline.is-loading{color:#94a3b8!important;opacity:.72!important;}
+      .mix-signal-live-inline.is-hidden{display:none!important;}    `;
     document.head.appendChild(style);
   }
 
@@ -2843,7 +2367,7 @@ try {
     const text = String(card?.innerText || card?.textContent || "").replace(/\s+/g, " ").trim();
     const symbolText = cleanSignalTickerText(card?.querySelector?.('[data-help="signal.symbol"], td.symbol, .header .symbol, .symbol'));
     const ticker = normalizeSymbol(symbolText || (text.match(/([^\s|:()[\]{}<>]+_?USDT)/i) || [])[1] || "", null);
-    const matches = Array.from(text.matchAll(/\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|BITGET|ASTERDEX|ASTER\.DEX|ASTER)\b\s*([↑↓])/gi));
+    const matches = Array.from(text.matchAll(/\b(BINANCE|MEXC|GATEIO|GATE\.IO|GATE|BINGX|BING|BYBITFUTURES|BYBITPERP|BYBIT\.USDT|BYBIT\.FUTURES|BYBIT|BITGET|ASTERDEX|ASTER\.DEX|ASTER)\b\s*([↑↓])/gi));
     let long = "";
     let short = "";
 
@@ -2990,13 +2514,61 @@ try {
     return Number.isFinite(n) ? `${n.toFixed(3)}%` : "-";
   }
 
+  const SPREAD_TONE_PALETTE = {
+    posWarm: [
+      { className: "is-spread-pos-warm-1", color: "#f8d27a", fill: "rgba(248,210,122,.12)" },
+      { className: "is-spread-pos-warm-2", color: "#f5c05f", fill: "rgba(245,192,95,.13)" },
+      { className: "is-spread-pos-warm-3", color: "#f7ad4f", fill: "rgba(247,173,79,.14)" },
+      { className: "is-spread-pos-warm-4", color: "#fb9842", fill: "rgba(251,152,66,.15)" },
+      { className: "is-spread-pos-warm-5", color: "#ff8533", fill: "rgba(255,133,51,.16)" }
+    ],
+    posGreen: [
+      { className: "is-spread-pos-green-1", color: "#86efac", fill: "rgba(134,239,172,.12)" },
+      { className: "is-spread-pos-green-2", color: "#5eea8f", fill: "rgba(94,234,143,.13)" },
+      { className: "is-spread-pos-green-3", color: "#3ee879", fill: "rgba(62,232,121,.14)" },
+      { className: "is-spread-pos-green-4", color: "#22e66a", fill: "rgba(34,230,106,.15)" },
+      { className: "is-spread-pos-green-5", color: "#19ff73", fill: "rgba(25,255,115,.16)" }
+    ],
+    negSoft: [
+      { className: "is-spread-neg-soft-1", color: "#f7aaa6", fill: "rgba(247,170,166,.12)" },
+      { className: "is-spread-neg-soft-2", color: "#f5918d", fill: "rgba(245,145,141,.13)" },
+      { className: "is-spread-neg-soft-3", color: "#f07878", fill: "rgba(240,120,120,.14)" },
+      { className: "is-spread-neg-soft-4", color: "#e86468", fill: "rgba(232,100,104,.15)" },
+      { className: "is-spread-neg-soft-5", color: "#dc555d", fill: "rgba(220,85,93,.16)" }
+    ],
+    negDeep: [
+      { className: "is-spread-neg-deep-1", color: "#d64b56", fill: "rgba(214,75,86,.16)" },
+      { className: "is-spread-neg-deep-2", color: "#c94350", fill: "rgba(201,67,80,.17)" },
+      { className: "is-spread-neg-deep-3", color: "#bd3b4a", fill: "rgba(189,59,74,.18)" },
+      { className: "is-spread-neg-deep-4", color: "#b13445", fill: "rgba(177,52,69,.19)" },
+      { className: "is-spread-neg-deep-5", color: "#a62f40", fill: "rgba(166,47,64,.2)" }
+    ]
+  };
+
   function getSpreadTone(value) {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return { className: "is-muted", color: "#94a3b8", fill: "rgba(148,163,184,.10)" };
-    if (n < 0) return { className: "is-negative", color: "#ef4444", fill: "rgba(239,68,68,.12)" };
-    if (n === 0) return { className: "is-zero", color: "#facc15", fill: "rgba(250,204,21,.12)" };
-    if (n >= 0.18) return { className: "is-positive", color: "#4ade80", fill: "rgba(74,222,128,.12)" };
-    return { className: "is-warning", color: "#facc15", fill: "rgba(250,204,21,.12)" };
+    const spread = Number(value);
+    if (!Number.isFinite(spread)) {
+      return { className: "is-muted", color: "#94a3b8", fill: "rgba(148,163,184,.1)" };
+    }
+
+    if (spread >= 0.2) {
+      const index = Math.min(Math.floor((spread - 0.2) / 0.1), SPREAD_TONE_PALETTE.posGreen.length - 1);
+      return SPREAD_TONE_PALETTE.posGreen[Math.max(0, index)];
+    }
+
+    if (spread >= 0) {
+      const index = Math.min(Math.floor(spread / 0.04), SPREAD_TONE_PALETTE.posWarm.length - 1);
+      return SPREAD_TONE_PALETTE.posWarm[Math.max(0, index)];
+    }
+
+    const absSpread = Math.abs(spread);
+    if (absSpread >= 0.2) {
+      const index = Math.min(Math.floor((absSpread - 0.2) / 0.1), SPREAD_TONE_PALETTE.negDeep.length - 1);
+      return SPREAD_TONE_PALETTE.negDeep[Math.max(0, index)];
+    }
+
+    const index = Math.min(Math.floor(absSpread / 0.04), SPREAD_TONE_PALETTE.negSoft.length - 1);
+    return SPREAD_TONE_PALETTE.negSoft[Math.max(0, index)];
   }
 
   function formatAge(tsMs) {
@@ -3329,10 +2901,10 @@ try {
             else setInlineLiveNode(card, "LIVE —", "is-muted", routeKey);
             continue;
           }
-          const tone = getSpreadTone(result.spread);
+          const cls = `sr-spread-tone ${getSpreadTone(result.spread).className}`;
           const text = formatPct(result.spread);
-          cacheInlineLive(routeKey, text, tone.className);
-          setInlineLiveNode(card, text, tone.className, routeKey);
+          cacheInlineLive(routeKey, text, cls);
+          setInlineLiveNode(card, text, cls, routeKey);
         } catch (_) {
           const latestCached = getCachedInlineLive(routeKey);
           if (latestCached) setInlineLiveNode(card, latestCached.text, latestCached.className, routeKey);
